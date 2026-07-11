@@ -16,3 +16,7 @@ remotion/node_modules/
 # build/os
 dist/
 .DS_Store
+
+# editors
+.idea/
+.vscode/
