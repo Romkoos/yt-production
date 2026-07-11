@@ -1,0 +1,18 @@
+# episode heavy artifacts
+episodes/*/sandbox/
+episodes/*/assets/*
+episodes/*/shorts/*
+!episodes/*/assets/.gitkeep
+!episodes/*/shorts/.gitkeep
+
+# local db
+db/tracker.sqlite
+db/tracker.sqlite-*
+
+# node
+node_modules/
+remotion/node_modules/
+
+# build/os
+dist/
+.DS_Store
