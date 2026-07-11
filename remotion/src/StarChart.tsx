@@ -10,8 +10,11 @@ export const StarChart: React.FC<StarChartProps> = ({ repoName, data }) => {
   const chartH = height - pad * 2
   const maxStars = Math.max(...data.map((d) => d.stars), 1)
 
+  // Guard the divisor: with a single data point, (data.length - 1) === 0 would make x NaN
+  // and the whole chart render silently blank. Center the lone point instead.
+  const denom = Math.max(data.length - 1, 1)
   const points = data.map((d, i) => ({
-    x: pad + (chartW * i) / (data.length - 1),
+    x: data.length === 1 ? pad + chartW / 2 : pad + (chartW * i) / denom,
     y: pad + chartH - (chartH * d.stars) / maxStars,
     stars: d.stars,
     date: d.date,
