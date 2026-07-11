@@ -24,10 +24,10 @@ voice, the final verdict, the humor, and the DaVinci Resolve edit.
 ### Full episode lifecycle (7 phases)
 
 1. **scout** — find candidates: trending repos, score by star-growth velocity, check whether a Russian video already exists.
-2. **review** — agentic test of the repo: clone into a sandbox, bring it up, run scenarios, write a report of "README vs reality" discrepancies with timecodes of interesting moments.
+2. **review** — agentic test of the repo: clone into a sandbox, bring it up, run scenarios, write a report of "README vs reality" discrepancies with **semantic** descriptions of interesting moments (no recording exists yet — see §5a).
 3. **script** — draft a script from the report by template: hook → what it is → the test → where they lie → verdict.
 4. **assets** — render Remotion scenes (star-growth chart, intro, verdict card) and 3 thumbnail variants from a parameterized template.
-5. **manual** — human phase: record voice, record screencast (Screen Studio), edit in Resolve. The pipeline waits here.
+5. **manual** — human phase: record voice, record screencast (Screen Studio), edit in Resolve. The pipeline waits here. Ends with a **timecode reconciliation** step: the host (or a helper command) writes the *real* final-video timecodes for the `[SHORT cut]` beats into STATE.md/script.md, which is what `cut-shorts` later consumes.
 6. **publish** — slice Shorts from the finished video by timecode (FFmpeg), subtitles (Whisper, Russian), generate descriptions/tags, hand off to the existing Late API pipeline.
 7. **retro** — collect YouTube Analytics into SQLite, compare against past episodes, record hypotheses, convert session friction into skill/command fixes.
 
@@ -164,6 +164,24 @@ A fresh Claude Code session must understand the project from CLAUDE.md alone. Co
 
 ---
 
+## 5a. Three clocks (timecode discipline)
+
+Three **distinct** clocks exist in this pipeline and must never be conflated:
+
+- **(a) Sandbox test time** (review phase) — moments observed while the agent tests the
+  repo. There is **no video recording** of this run, so "video moments" are described
+  **semantically**, never with timecodes (e.g. "the moment install crashes with error X",
+  "the demo scenario with Y").
+- **(b) Host screencast time** (manual phase) — the host records the screencast *after*
+  the script exists. The script is therefore a **shooting plan**, not a reference to an
+  existing recording; its screencast cues are semantic: `[СКРИНКАСТ: <what to show>]`.
+- **(c) Final edit time** — real timecodes in the rendered video are known **only after
+  the Resolve edit**. `[SHORT cut]` markers in `script.md` are **candidate markers only**
+  (which narrative beats would make good Shorts), not real timecodes. A **timecode
+  reconciliation** step in the manual phase fills real final-video timecodes into
+  STATE.md/script.md after the edit; `/cut-shorts` consumes **those**, never the
+  script-draft markers.
+
 ## 6. Phase-1 MVP commands (fully working)
 
 ### `/review-repo <url> [--episode <id>]`
@@ -188,7 +206,8 @@ The core of the whole pipeline.
    - **Works** (what actually worked)
    - **Broke** (what failed, with errors)
    - **Suspicious** (red flags, star-forensics signal)
-   - **Video moments** — candidates with sandbox timecodes for the screencast
+   - **Video moments** — **semantic** descriptions of moments worth showing on screencast
+     (clock (a): no recording exists, so no timecodes — e.g. "install crashes with error X")
    - **Draft verdict lean** — a first guess on the ГОДНОТА/ХАЙП/НАКРУТКА/РАНО scale, argued
 6. Update STATE.md → `current_phase: review`, `phase_status: done`; write phase metrics
    (§8).
@@ -199,11 +218,13 @@ The core of the whole pipeline.
 2. Write `episodes/<ep>/script.md` following hook → what → test → lies → verdict, with
    inline production tags:
    - `[ГОЛОС]` — voiceover line
-   - `[СКРИНКАСТ tt:tt из теста]` — screencast reference to a sandbox timecode
+   - `[СКРИНКАСТ: <what to show>]` — semantic screencast cue (clock (b): a shooting
+     instruction for the host, NOT a reference to an existing recording or a sandbox timecode)
    - `[АНИМАЦИЯ: …]` — Remotion scene cue
    - `[МЕМ: …]` — meme cue
-   - `[SHORT cut: tt:tt–tt:tt]` — marks a segment as a future Shorts slice (consumed by
-     `cut-shorts` later)
+   - `[SHORT cut: <narrative beat>]` — **candidate** marker (clock (c)) flagging a beat
+     that would make a good Short. NOT a real timecode; real timecodes are reconciled after
+     the edit (see manual phase) and only then consumed by `/cut-shorts`.
 3. Update STATE.md → `current_phase: script`, `phase_status: done`; write phase metrics.
 
 ---
@@ -221,7 +242,12 @@ Each skeleton documents **input / output / side-effects / TODO**; no implementat
   episodes, checks for an existing Russian video, and emits a candidate list. Designed
   headless/CLI-friendly (for a future Jenkins job): runnable from CLI, output to a file.
 - `assets` — render Remotion scenes (StarChart/Intro/VerdictCard) + 3 thumbnail variants.
-- `cut-shorts` — FFmpeg slice by `[SHORT cut]` timecodes + Whisper Russian subtitles.
+- `cut-shorts` — FFmpeg slice + Whisper Russian subtitles. **Timecode discipline (clock
+  (c)):** it must slice by the **reconciled real final-video timecodes** written into
+  STATE.md/script.md during the manual phase — NOT by the `[SHORT cut]` candidate markers
+  from the script draft (those are narrative beats, not real timecodes). The skeleton
+  contract states this explicitly so the future implementation never assumes script
+  timecodes are real.
 - `publish-pack` — generate descriptions/tags; prepare artifacts for the existing Late API
   pipeline (does not publish itself).
 - `retro` — pull YouTube Analytics into `db/tracker.sqlite`, compare against past episodes,
@@ -267,15 +293,16 @@ YouTube-analytics detail columns (views, retention, CTR, …) are deferred to th
 ## 9. .gitignore policy
 
 **Only text artifacts are tracked:** `STATE.md`, `report.md`, `script.md`, and Remotion
-source code. Heavy/binary artifacts are ignored:
+source code. Heavy/binary artifacts are ignored **wholesale by directory** (not by
+extension — enumerating extensions would let `webp`/`wav`/`mov`/etc. leak into git):
 
 ```
 # episode heavy artifacts
 episodes/*/sandbox/          # cloned third-party repos incl. their node_modules
-episodes/*/assets/*.mp4
-episodes/*/assets/*.png      # rendered thumbnails
-episodes/*/assets/*.jpg
-episodes/*/shorts/*.mp4
+episodes/*/assets/*          # rendered mp4 / thumbnails / any format
+episodes/*/shorts/*          # rendered shorts, any format
+!episodes/*/assets/.gitkeep
+!episodes/*/shorts/.gitkeep
 
 # local db
 db/tracker.sqlite
@@ -286,8 +313,7 @@ node_modules/
 remotion/node_modules/
 ```
 
-(`.gitkeep` files preserve the empty `assets/` and `shorts/` directory structure where
-needed.)
+(`.gitkeep` files preserve the empty `assets/` and `shorts/` directory structure.)
 
 ---
 
