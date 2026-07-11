@@ -4,6 +4,8 @@ episodes/*/assets/*
 episodes/*/shorts/*
 !episodes/*/assets/.gitkeep
 !episodes/*/shorts/.gitkeep
+# keep text prep docs (e.g. MEME_LIST.md) tracked; rendered media (*.mp4/*.png/*.json) stays ignored
+!episodes/*/assets/*.md
 
 # local db
 db/tracker.sqlite

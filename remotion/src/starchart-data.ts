@@ -3,9 +3,13 @@ export interface StarPoint {
   stars: number
 }
 
-export interface StarChartProps {
+// `type` (not `interface`) so it satisfies Remotion's `Props extends Record<string, unknown>`.
+export type StarChartProps = {
   repoName: string
   data: StarPoint[]
+  // Provenance caption for sparse/degraded data tiers (e.g. "по снимкам Wayback Machine").
+  // Omitted/empty when the data is the full real series.
+  sourceLabel?: string
 }
 
 export const TEST_STARCHART: StarChartProps = {
