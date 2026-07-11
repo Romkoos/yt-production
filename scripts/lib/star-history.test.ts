@@ -70,6 +70,19 @@ describe('aggregateStarHistory', () => {
     expect(out.map((p) => p.stars)).toEqual([1, 1, 1, 2]) // Feb/Mar carry the real count, not a gap
   })
 
+  it('never emits duplicate consecutive points when the cap is near the series length', () => {
+    // 30 distinct weekly buckets, cap at 29 -> Math.round collisions would otherwise dupe indices
+    const stamps = Array.from({ length: 30 }, (_, i) => {
+      const d = new Date('2026-01-01T00:00:00Z')
+      d.setUTCDate(d.getUTCDate() + i * 7)
+      return d.toISOString()
+    })
+    const out = aggregateStarHistory(stamps, { createdAt: new Date('2026-01-01'), maxPoints: 29 })
+    const dates = out.map((p) => p.date)
+    expect(new Set(dates).size).toBe(dates.length) // all unique
+    expect(out[out.length - 1].stars).toBe(30) // final total preserved
+  })
+
   it('ignores unparseable timestamps', () => {
     const out = aggregateStarHistory(['nonsense', iso('2026-03-10'), ''])
     expect(out).toHaveLength(1)

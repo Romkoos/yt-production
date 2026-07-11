@@ -52,14 +52,20 @@ function nextBucketStart(d: Date, bucket: Bucket): Date {
 }
 
 // Evenly downsample to at most `max` points, always keeping the first and last (the last point
-// carries the true cumulative total, so it must survive).
+// carries the true cumulative total, so it must survive). Dedupes indices — when `max` is close
+// to points.length, Math.round can map neighbouring i's to the same index, which would emit
+// duplicate points; we keep each index once and still guarantee the final point.
 function downsample(points: StarPoint[], max: number): StarPoint[] {
   if (points.length <= max) return points
-  const out: StarPoint[] = []
   const step = (points.length - 1) / (max - 1)
-  for (let i = 0; i < max; i++) out.push(points[Math.round(i * step)])
-  out[out.length - 1] = points[points.length - 1]
-  return out
+  const indices: number[] = []
+  for (let i = 0; i < max; i++) {
+    const j = Math.round(i * step)
+    if (indices.length === 0 || indices[indices.length - 1] !== j) indices.push(j)
+  }
+  const lastIdx = points.length - 1
+  if (indices[indices.length - 1] !== lastIdx) indices.push(lastIdx)
+  return indices.map((j) => points[j])
 }
 
 export interface AggregateOptions {

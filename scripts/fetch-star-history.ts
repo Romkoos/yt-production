@@ -118,7 +118,7 @@ async function fetchRest(owner: string, name: string, token?: string): Promise<s
 // Sparse but genuine historical measurements. Best-effort: a snapshot is only used if we can
 // confidently extract a number.
 async function fetchWayback(owner: string, name: string): Promise<StarPoint[]> {
-  const cdx = `http://web.archive.org/cdx/search/cdx?url=github.com/${owner}/${name}&output=json&filter=statuscode:200&collapse=timestamp:6&limit=15`
+  const cdx = `https://web.archive.org/cdx/search/cdx?url=github.com/${owner}/${name}&output=json&filter=statuscode:200&collapse=timestamp:6&limit=15`
   const res = await fetch(cdx, { headers: { 'User-Agent': UA } })
   if (!res.ok) throw new Error(`Wayback CDX HTTP ${res.status}`)
   const rows = (await res.json()) as string[][]
