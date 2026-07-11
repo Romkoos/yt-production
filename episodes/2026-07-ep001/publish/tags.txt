@@ -1,0 +1,16 @@
+astryx
+facebook astryx
+дизайн-система
+design system
+React
+StyleX
+open source
+обзор репозитория
+разбор github
+trending github
+frontend
+UI компоненты
+component library
+CLI
+star history
+разбор репо
