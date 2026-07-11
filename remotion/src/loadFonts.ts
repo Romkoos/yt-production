@@ -42,7 +42,8 @@ export function loadFonts(): void {
         unicodeRange: spec.subset === 'cyrillic' ? CYRILLIC_RANGE : undefined,
       })
       return face.load().then((loaded) => {
-        document.fonts.add(loaded)
+        // FontFaceSet.add isn't in this TS DOM lib's type; the runtime method exists.
+        ;(document.fonts as unknown as { add: (f: FontFace) => void }).add(loaded)
       })
     }),
   )

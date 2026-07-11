@@ -3,7 +3,8 @@ export interface StarPoint {
   stars: number
 }
 
-export interface StarChartProps {
+// `type` (not `interface`) so it satisfies Remotion's `Props extends Record<string, unknown>`.
+export type StarChartProps = {
   repoName: string
   data: StarPoint[]
 }
