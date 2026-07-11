@@ -116,6 +116,9 @@ Never write an `MM:SS`-style timecode in a report or script draft.
   were measurements. A star-forensics channel that fabricates a star curve is dead on arrival.
   When only sparse real points are available, plot those and label the source (e.g. `по снимкам
   Wayback Machine`, `по двум опорным точкам`); when none are available, render no chart.
+  This applies to **every published claim, not just charts** — titles, descriptions, thumbnails.
+  Every quantitative claim we assert as fact must be backed by `report.md` or cached fetch data
+  (a repo's own README claim may be *quoted as a claim*, never stated as our verified finding).
 
 ## Conventions
 
