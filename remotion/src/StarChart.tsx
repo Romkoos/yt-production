@@ -29,6 +29,13 @@ export const StarChart: React.FC<StarChartProps> = ({ repoName, data, sourceLabe
 
   const titleOpacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' })
 
+  // With many buckets (gap-filled weekly series can be ~26+), labelling every point smears the
+  // axis. Thin the date labels to ~8 evenly spaced, and show a star-value label only where the
+  // value changes (so a long flat run isn't 20 stacked "1"s) or at the last point.
+  const dateStep = Math.max(1, Math.ceil(points.length / 8))
+  const showDate = (i: number) => i % dateStep === 0 || i === points.length - 1
+  const showValue = (i: number) => i === 0 || points[i].stars !== points[i - 1].stars || i === points.length - 1
+
   return (
     <AbsoluteFill style={{ backgroundColor: '#0d1117', fontFamily: FONT_FAMILY }}>
       <svg width={width} height={height}>
@@ -40,12 +47,16 @@ export const StarChart: React.FC<StarChartProps> = ({ repoName, data, sourceLabe
         {visible.map((p, i) => (
           <g key={i}>
             <circle cx={p.x} cy={p.y} r={8} fill="#facc15" />
-            <text x={p.x} y={p.y - 18} fill="#e6edf3" fontSize={24} textAnchor="middle">
-              {p.stars.toLocaleString()}
-            </text>
-            <text x={p.x} y={pad + chartH + 34} fill="#8b949e" fontSize={22} textAnchor="middle">
-              {p.date}
-            </text>
+            {showValue(i) ? (
+              <text x={p.x} y={p.y - 18} fill="#e6edf3" fontSize={24} textAnchor="middle">
+                {p.stars.toLocaleString()}
+              </text>
+            ) : null}
+            {showDate(i) ? (
+              <text x={p.x} y={pad + chartH + 34} fill="#8b949e" fontSize={22} textAnchor="middle">
+                {p.date}
+              </text>
+            ) : null}
           </g>
         ))}
         {sourceLabel ? (
