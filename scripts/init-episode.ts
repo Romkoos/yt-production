@@ -45,6 +45,11 @@ function main() {
   const episodeId = nextEpisodeId(dirs, yearMonth)
   const number = nextEpisodeNumber(dirs)
   const epDir = join(EPISODES, episodeId)
+  if (existsSync(epDir)) {
+    // Fail loudly rather than silently overwriting an existing episode's STATE.md.
+    console.error(`Episode dir already exists, refusing to overwrite: ${epDir}`)
+    process.exit(1)
+  }
   mkdirSync(join(epDir, 'assets'), { recursive: true })
   mkdirSync(join(epDir, 'shorts'), { recursive: true })
   writeFileSync(join(epDir, 'assets', '.gitkeep'), '')
