@@ -11,6 +11,7 @@ updated: {{DATE}}
 ---
 
 ## Phase checklist
+<!-- markers: [ ] pending · [~] in progress · [x] done · [-] skipped (add a reason, e.g. "scout (skipped — direct review)") -->
 - [ ] scout
 - [ ] review
 - [ ] script

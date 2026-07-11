@@ -11,7 +11,7 @@ updated: 2026-07-11
 ---
 
 ## Phase checklist
-- [ ] scout
+- [-] scout (skipped — direct review)
 - [x] review
 - [x] script
 - [ ] assets

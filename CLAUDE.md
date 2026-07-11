@@ -71,6 +71,11 @@ resume) and **writes it last**. Frontmatter fields: `episode`, `number`, `repo_u
 `title`, `current_phase`, `phase_status` (pending|in_progress|blocked|done), `verdict`,
 `youtube_video_id`, `updated`. Body: `## Phase checklist`, `## Next action`, `## Artifacts`.
 
+**Checklist markers:** `- [ ]` pending · `- [~]` in progress · `- [x]` done · `- [-]`
+skipped (always with a reason). A phase that never ran for this episode is *skipped*, not
+pending — e.g. an episode started directly with `/review-repo` (no scout) records
+`- [-] scout (skipped — direct review)` so it never looks perpetually pending.
+
 ### Episode identity
 
 Folder `YYYY-MM-epNNN` (e.g. `2026-07-ep001`). `NNN` is a **channel-wide sequential number

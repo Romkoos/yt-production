@@ -159,6 +159,11 @@ Edit `episodes/<ep>/STATE.md`:
   (e.g. `sandbox/: episodes/<ep>/sandbox/<repo>`).
 - `## Next action`: replace it with `Run /script`.
 - `## Phase checklist`: check the `review` box (`- [x] review`).
+- `## Phase checklist`: **if this command created the episode itself** (Step 1 ran
+  `pnpm episode:init`, i.e. no `--episode` was passed), the scout phase never ran for this
+  episode — mark it skipped rather than leaving it pending:
+  `- [-] scout (skipped — direct review)`. (If `--episode` was passed, leave the scout
+  line as the scout phase left it.)
 
 Leave every other field and section (repo_url, title, verdict, youtube_video_id, the
 rest of the checklist) untouched — this command only owns the review phase.
