@@ -1,7 +1,9 @@
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from 'remotion'
 import type { StarChartProps } from './starchart-data'
+import { loadFonts, FONT_FAMILY } from './loadFonts'
 
-export const StarChart: React.FC<StarChartProps> = ({ repoName, data }) => {
+export const StarChart: React.FC<StarChartProps> = ({ repoName, data, sourceLabel }) => {
+  loadFonts()
   const frame = useCurrentFrame()
   const { fps, width, height } = useVideoConfig()
 
@@ -28,7 +30,7 @@ export const StarChart: React.FC<StarChartProps> = ({ repoName, data }) => {
   const titleOpacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' })
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#0d1117', fontFamily: 'sans-serif' }}>
+    <AbsoluteFill style={{ backgroundColor: '#0d1117', fontFamily: FONT_FAMILY }}>
       <svg width={width} height={height}>
         <text x={pad} y={pad - 30} fill="#e6edf3" fontSize={44} opacity={titleOpacity}>
           ⭐ {repoName}
@@ -46,6 +48,11 @@ export const StarChart: React.FC<StarChartProps> = ({ repoName, data }) => {
             </text>
           </g>
         ))}
+        {sourceLabel ? (
+          <text x={pad + chartW} y={pad - 30} fill="#8b949e" fontSize={26} textAnchor="end" opacity={titleOpacity}>
+            {sourceLabel}
+          </text>
+        ) : null}
       </svg>
     </AbsoluteFill>
   )

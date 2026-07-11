@@ -7,6 +7,9 @@ export interface StarPoint {
 export type StarChartProps = {
   repoName: string
   data: StarPoint[]
+  // Provenance caption for sparse/degraded data tiers (e.g. "по снимкам Wayback Machine").
+  // Omitted/empty when the data is the full real series.
+  sourceLabel?: string
 }
 
 export const TEST_STARCHART: StarChartProps = {
