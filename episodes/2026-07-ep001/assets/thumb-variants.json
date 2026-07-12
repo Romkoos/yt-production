@@ -42,9 +42,10 @@
       "verdict": "ГОДНОТА",
       "verdictPosition": "top-right",
       "logo": { "src": "thumb/logo-facebook.png", "glyph": ">_" },
+      "logoScale": 0.82,
       "hook": [
-        { "text": "UI без", "size": "lg", "weight": 700 },
-        { "text": "сборки", "size": "xl", "accent": true }
+        { "text": "Стоит", "size": "md", "weight": 700 },
+        { "text": "переходить?", "size": "lg", "accent": true }
       ]
     }
   }

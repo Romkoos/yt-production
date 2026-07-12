@@ -1,8 +1,9 @@
 # yt-production — project charter
 
-`yt-production` is the working name (NOT the channel name) for a Russian-language YouTube
-channel. This file is the source of truth for a fresh Claude Code session: read it and you
-understand the channel, the pipeline, and the rules — no external context needed.
+`yt-production` is the repo working name (NOT the channel name); the channel is **Senior
+Skeptic** — a Russian-language YouTube channel. This file is the source of truth for a fresh
+Claude Code session: read it and you understand the channel, the pipeline, and the rules — no
+external context needed.
 
 ---
 
