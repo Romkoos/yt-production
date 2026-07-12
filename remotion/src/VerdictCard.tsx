@@ -1,5 +1,6 @@
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from 'remotion'
 import { loadFonts, FONT_FAMILY } from './loadFonts'
+import { ChannelLogo } from './ChannelLogo'
 import { BG, DEFAULT_BRANDING, verdictStyle, type Branding } from './theme'
 
 // `type` (not `interface`) so it satisfies Remotion's `Props extends Record<string, unknown>`.
@@ -59,6 +60,19 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
 
       <div style={{ fontSize: 46, color: style.bg, fontWeight: 700, opacity: glossIn }}>
         {style.gloss}
+      </div>
+
+      {/* channel mark — corner watermark, secondary to the verdict stamp */}
+      <div style={{ position: 'absolute', right: 56, bottom: 48, display: 'flex', alignItems: 'center', gap: 14, opacity: 0.85 }}>
+        <ChannelLogo
+          src={branding.logoSrc}
+          size={64}
+          style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.5))' }}
+          fallback={
+            <div style={{ backgroundColor: branding.accent, color: BG, fontWeight: 700, fontSize: 32, fontFamily: 'ui-monospace, Menlo, monospace', padding: '4px 12px', borderRadius: 10 }}>{'>_'}</div>
+          }
+        />
+        <span style={{ fontSize: 28, color: '#8b949e', fontWeight: 700, letterSpacing: 1 }}>{branding.channelName}</span>
       </div>
     </AbsoluteFill>
   )

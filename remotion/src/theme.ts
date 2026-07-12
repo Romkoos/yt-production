@@ -2,16 +2,22 @@
 // real channel identity (name, tagline, accent) swaps in later — the channel has no name yet,
 // so these are neutral placeholders.
 
+import { staticFile } from 'remotion'
+
 export interface Branding {
   channelName: string
   tagline: string
   accent: string // hex
+  logoSrc?: string // resolved url to the channel mark (staticFile output); nobg variant by default
 }
 
 export const DEFAULT_BRANDING: Branding = {
   channelName: 'РАЗБОР РЕПО',
   tagline: 'трендовые репозитории на честном тесте',
   accent: '#facc15',
+  // transparent (no plate) mark — sits clean on our dark glow/texture surfaces.
+  // ChannelLogo falls back to the `>_` glyph if this file is missing at render time.
+  logoSrc: staticFile('branding/logo-nobg.svg'),
 }
 
 export const BG = '#0d1117' // GitHub-dark base, matches StarChart

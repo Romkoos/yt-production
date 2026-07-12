@@ -1,5 +1,6 @@
 import { AbsoluteFill, Img, staticFile } from 'remotion'
 import { loadFonts, FONT_FAMILY } from './loadFonts'
+import { ChannelLogo } from './ChannelLogo'
 import { BG, DEFAULT_BRANDING, verdictStyle } from './theme'
 import type { HookLine, TermTone, ThumbLayout, ThumbLogo, ThumbTemplateProps, VerdictPosition } from './thumb-schema'
 
@@ -270,9 +271,18 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
       {/* text (2) — verdict sticker (out of the bottom-right timestamp zone) */}
       <VerdictSticker verdict={verdict} position={verdictPosition} />
 
-      {/* channel wordmark, bottom-left (branding decoration) */}
-      <div style={{ position: 'absolute', left: PAD, bottom: 40, fontSize: 26, color: acc, fontWeight: 700, letterSpacing: 1 }}>
-        {branding.channelName}
+      {/* channel lockup, bottom-left (branding decoration) — our mark + wordmark.
+          NOTE: the top-left `>_` box is the REPO identity slot, left untouched. */}
+      <div style={{ position: 'absolute', left: PAD, bottom: 36, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <ChannelLogo
+          src={branding.logoSrc}
+          size={52}
+          style={{ filter: `drop-shadow(0 6px 16px ${glow}55)` }}
+          fallback={
+            <div style={{ backgroundColor: acc, color: BG, fontWeight: 700, fontSize: 26, fontFamily: 'ui-monospace, Menlo, monospace', padding: '2px 10px', borderRadius: 8 }}>{'>_'}</div>
+          }
+        />
+        <span style={{ fontSize: 26, color: acc, fontWeight: 700, letterSpacing: 1 }}>{branding.channelName}</span>
       </div>
     </AbsoluteFill>
   )
