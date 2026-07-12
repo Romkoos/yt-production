@@ -60,14 +60,22 @@ npx remotion render Intro       ../episodes/<ep>/assets/Intro.mp4       --props=
 npx remotion render VerdictCard ../episodes/<ep>/assets/VerdictCard.mp4 --props='{"verdict":"<verdict>","repoName":"<owner/repo>"}'
 ```
 
-Then 3 thumbnail variants (1280×720 stills), text drawn from the script's hook — mark them
-clearly v1/v2/v3 so the host can pick / A-B test. Vary `hookText` (and optionally `bgVariant`):
+Thumbnails are NOT rendered with ad-hoc CLI props. Instead they are driven by a tracked
+per-episode file, `episodes/<ep>/assets/thumb-variants.json` — an array of `{ label, props }`
+where `props` is a full `ThumbTemplate` prop object (`repoName`, `verdict`, the styled `hook`
+lines, `logo`, `layout`, optional `accent`/`glowColor`/`logoScale`/`texture` — validated against
+`thumbSchema` at render time). If the file is missing, create it (2–3 variants, hook lines drawn
+from the script's hook / `THUMB_HOOKS.md`, `verdict` = this episode's verdict). Then render the
+contact sheet — this is the **final step of `/assets`**:
 
 ```bash
-npx remotion still ThumbTemplate ../episodes/<ep>/assets/thumb-v1.png --props='{"hookText":"<hook A>","repoName":"<owner/repo>","verdict":"<verdict>","bgVariant":0}'
-npx remotion still ThumbTemplate ../episodes/<ep>/assets/thumb-v2.png --props='{"hookText":"<hook B>","repoName":"<owner/repo>","verdict":"<verdict>","bgVariant":1}'
-npx remotion still ThumbTemplate ../episodes/<ep>/assets/thumb-v3.png --props='{"hookText":"<hook C>","repoName":"<owner/repo>","verdict":"<verdict>","bgVariant":2}'
+node --import tsx scripts/thumbs-preview.ts --episode <ep>
 ```
+
+This renders every variant to `episodes/<ep>/assets/preview/thumb-vN.png` (+ a 120px copy) and
+opens a self-refreshing gallery (`preview/index.html`) for the host to review / A-B test — see
+`/thumbs-preview`. The host then iterates by text feedback (agent edits `thumb-variants.json`,
+re-runs the render; the page updates in ≤2s) or fine-tunes props live in `npx remotion studio`.
 
 All thumbnail text is a programmatic render (channel rule — never generative). Branding is a
 swappable prop with a neutral placeholder default; the channel has no name yet.
@@ -120,12 +128,15 @@ scenes rendered).
 ## Output contract / side-effects
 
 Writes **only**:
-- `episodes/<ep>/assets/` — `StarChart.mp4`, `Intro.mp4`, `VerdictCard.mp4`, `thumb-v1..3.png`,
-  `MEME_LIST.md`, and the gitignored `star-history.raw.json` / `StarChart.props.json` cache.
+- `episodes/<ep>/assets/` — `StarChart.mp4`, `Intro.mp4`, `VerdictCard.mp4`, `MEME_LIST.md`,
+  `thumb-variants.json` (tracked render source), the gitignored `star-history.raw.json` /
+  `StarChart.props.json` cache, and `preview/` (the gitignored thumbnail contact sheet:
+  `thumb-vN.png`, `thumb-vN.120.png`, `index.html`).
 - `episodes/<ep>/SHOTLIST.md` — new file.
 - `episodes/<ep>/STATE.md` — updated in place (assets phase fields only).
 - `db/tracker.sqlite` — one new `phaseMetrics` row.
 
-Rendered media (`*.mp4`, `*.png`, `*.json`) is gitignored; text prep docs (`MEME_LIST.md`,
-`SHOTLIST.md`) are tracked. The only network access is the star-history fetch (read-only GitHub
-API); no third-party repo code is executed.
+Rendered media (`*.mp4`, `*.png`, `*.json`) is gitignored — EXCEPT `thumb-variants.json`, which is
+tracked (it is the editable source for the thumbnail loop, not a render output); text prep docs
+(`MEME_LIST.md`, `SHOTLIST.md`) are tracked. The only network access is the star-history fetch
+(read-only GitHub API); no third-party repo code is executed.

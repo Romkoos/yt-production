@@ -1,0 +1,51 @@
+[
+  {
+    "label": "A — clean right",
+    "props": {
+      "layout": "logo-right",
+      "accent": "#58a6ff",
+      "glowColor": "#1877f2",
+      "repoName": "facebook/astryx",
+      "verdict": "ГОДНОТА",
+      "verdictPosition": "top-right",
+      "logo": { "src": "thumb/logo-facebook.png", "glyph": ">_" },
+      "hook": [
+        { "text": "Дизайн-система", "size": "md", "weight": 700 },
+        { "text": "Meta", "size": "xl", "accent": true }
+      ]
+    }
+  },
+  {
+    "label": "B — hero",
+    "props": {
+      "layout": "logo-hero",
+      "accent": "#facc15",
+      "glowColor": "#1877f2",
+      "repoName": "facebook/astryx",
+      "verdict": "ГОДНОТА",
+      "verdictPosition": "top-right",
+      "logo": { "src": "thumb/logo-facebook.png", "glyph": ">_" },
+      "texture": { "text": "$ pnpm install --ignore-scripts", "tone": "dim" },
+      "hook": [
+        { "text": "UI для тебя и", "size": "md", "weight": 700 },
+        { "text": "AI", "size": "xl", "accent": true }
+      ]
+    }
+  },
+  {
+    "label": "C — spotlight",
+    "props": {
+      "layout": "logo-spot",
+      "accent": "#3fb950",
+      "glowColor": "#1877f2",
+      "repoName": "facebook/astryx",
+      "verdict": "ГОДНОТА",
+      "verdictPosition": "top-right",
+      "logo": { "src": "thumb/logo-facebook.png", "glyph": ">_" },
+      "hook": [
+        { "text": "UI без", "size": "lg", "weight": 700 },
+        { "text": "сборки", "size": "xl", "accent": true }
+      ]
+    }
+  }
+]

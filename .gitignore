@@ -6,6 +6,8 @@ episodes/*/shorts/*
 !episodes/*/shorts/.gitkeep
 # keep text prep docs (e.g. MEME_LIST.md) tracked; rendered media (*.mp4/*.png/*.json) stays ignored
 !episodes/*/assets/*.md
+# thumb-variants.json is the editable render source for /thumbs-preview — track it (preview/ renders stay ignored)
+!episodes/*/assets/thumb-variants.json
 
 # local db
 db/tracker.sqlite
