@@ -127,8 +127,13 @@ Never write an `MM:SS`-style timecode in a report or script draft.
 - Package manager: **pnpm**. Node 22. Tests: vitest (`pnpm test`).
 - Metrics DB is local: `db/tracker.sqlite` (Drizzle). It has NO connection to any global
   tracker. Migrate with `pnpm db:migrate`.
-- Remotion is a **standalone package** under `remotion/` (own lockfile; `.npmrc` sets
-  `ignore-workspace`). Run it from there: `cd remotion && pnpm install && pnpm studio`.
+- Remotion is a **standalone package** under `remotion/` (own lockfile). Install/run it from there
+  with the flag — `cd remotion && pnpm install --ignore-workspace && pnpm studio` — and add deps with
+  `pnpm add <pkg> --ignore-workspace`. **pnpm 9 has no `ignore-workspace` .npmrc key** (CLI flag only):
+  a plain `pnpm install` silently writes a `remotion:` importer into the **root** `pnpm-lock.yaml`.
+  If a root `pnpm-lock.yaml` diff ever contains a `remotion:` importer, the install was run wrong —
+  `git checkout HEAD -- pnpm-lock.yaml`, then reinstall with `--ignore-workspace`. The
+  `scripts/workspace-hygiene.test.ts` tripwire fails on exactly this.
 
 ---
 
