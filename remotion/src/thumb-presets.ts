@@ -6,9 +6,9 @@ import type { ThumbTemplateProps } from './ThumbTemplate'
 // Focal object: the cached GitHub org avatar (remotion/public/thumb/logo-facebook.png,
 // sourced from github.com/facebook.png). Glyph fallback if absent.
 //
-// HOOKS BELOW ARE PLACEHOLDERS. The real hook per variant is chosen by the host
-// from episodes/2026-07-ep001/assets/THUMB_HOOKS.md, then filled in here before
-// the final render. Hooks must be viewer-facing and must not contradict ГОДНОТА.
+// HOOKS are the host's picks from episodes/2026-07-ep001/assets/THUMB_HOOKS.md:
+// A1 «Дизайн-система Meta», B1 «UI для тебя и AI», C3 «Стоит переходить?».
+// Viewer-facing, ГОДНОТА-safe. Keep in sync with thumb-variants.json (the render source).
 //
 // Honesty: real logo, honest data only. README marketing («8 лет в Meta»,
 // «13 000+ приложений») is NOT asserted as our finding anywhere on the thumb.
@@ -61,9 +61,10 @@ export const THUMB_ASTRYX_C: ThumbTemplateProps = {
   verdict: 'ГОДНОТА',
   verdictPosition: 'top-right',
   logo: LOGO,
+  logoScale: 0.82, // trims the focal tile so the long «переходить?» hero word clears it
   hook: [
-    { text: 'UI без', size: 'lg', weight: 700 },
-    { text: 'сборки', size: 'xl', accent: true },
+    { text: 'Стоит', size: 'md', weight: 700 },
+    { text: 'переходить?', size: 'lg', accent: true },
   ],
 }
 

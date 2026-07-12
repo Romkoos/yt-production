@@ -41,6 +41,9 @@ export const brandingSchema = z.object({
   channelName: z.string(),
   tagline: z.string(),
   accent: zColor(),
+  // resolved url to the channel mark (a staticFile() output); nobg variant by
+  // default — see DEFAULT_BRANDING. Empty → the `>_` glyph fallback renders.
+  logoSrc: z.string().optional(),
 })
 
 export const thumbSchema = z.object({

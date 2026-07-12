@@ -1,5 +1,6 @@
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from 'remotion'
 import { loadFonts, FONT_FAMILY } from './loadFonts'
+import { ChannelLogo } from './ChannelLogo'
 import { BG, DEFAULT_BRANDING, type Branding } from './theme'
 
 // `type` (not `interface`) so it satisfies Remotion's `Props extends Record<string, unknown>`.
@@ -8,8 +9,13 @@ export type IntroProps = {
   branding?: Branding
 }
 
-// Channel intro: programmatic logo mark (">_" terminal prompt) + episode number + channel
+const MARK = 200
+
+// Channel intro: the channel logo mark (ring + play triangle) + episode number + channel
 // name/tagline. Simple but finished; all branding is swappable via the `branding` prop.
+// The mark uses a plain spring scale-in for now; the ring/triangle assembly animation is a
+// deliberate follow-up — the mark is a static <Img> here (glyph plate as the missing-file
+// fallback).
 export const Intro: React.FC<IntroProps> = ({ episodeNumber, branding = DEFAULT_BRANDING }) => {
   loadFonts()
   const frame = useCurrentFrame()
@@ -30,21 +36,29 @@ export const Intro: React.FC<IntroProps> = ({ episodeNumber, branding = DEFAULT_
         gap: 40,
       }}
     >
-      {/* logo mark */}
-      <div
-        style={{
-          width: 180,
-          height: 180,
-          borderRadius: 36,
-          backgroundColor: branding.accent,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          transform: `scale(${markScale})`,
-          boxShadow: `0 0 80px ${branding.accent}55`,
-        }}
-      >
-        <span style={{ fontSize: 96, fontWeight: 700, color: BG, lineHeight: 1 }}>{'>_'}</span>
+      {/* logo mark — the channel mark (nobg) as the primary, spring-scaled brand mark */}
+      <div style={{ transform: `scale(${markScale})`, display: 'flex' }}>
+        <ChannelLogo
+          src={branding.logoSrc}
+          size={MARK}
+          style={{ filter: `drop-shadow(0 12px 44px ${branding.accent}66)` }}
+          fallback={
+            <div
+              style={{
+                width: MARK,
+                height: MARK,
+                borderRadius: 40,
+                backgroundColor: branding.accent,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                boxShadow: `0 0 80px ${branding.accent}55`,
+              }}
+            >
+              <span style={{ fontSize: 104, fontWeight: 700, color: BG, lineHeight: 1 }}>{'>_'}</span>
+            </div>
+          }
+        />
       </div>
 
       <div style={{ textAlign: 'center', opacity: textIn, transform: `translateY(${textY}px)` }}>

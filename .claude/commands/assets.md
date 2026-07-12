@@ -78,7 +78,14 @@ opens a self-refreshing gallery (`preview/index.html`) for the host to review / 
 re-runs the render; the page updates in ≤2s) or fine-tunes props live in `npx remotion studio`.
 
 All thumbnail text is a programmatic render (channel rule — never generative). Branding is a
-swappable prop with a neutral placeholder default; the channel has no name yet.
+swappable prop; `DEFAULT_BRANDING` carries the channel identity (Senior Skeptic, nobg logo mark).
+
+**Open TODO — repo-avatar header slot.** Round-3 spec wants the top-left header identity slot to
+show the cached repo owner avatar (`github.com/<owner>.png`, e.g. `thumb/logo-<owner>.png`) with
+the `>_` glyph as fallback. Today it renders a static `>_` box only — the cached avatar is used as
+the *focal* centre tile, not in the header. Caveat before implementing: the avatar is already the
+focal object, so a second copy in the header may read as redundant — decide per layout (a small
+monochrome/rounded header mark can still help brand-vs-repo legibility). Not yet wired to a prop.
 
 ---
 

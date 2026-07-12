@@ -1,17 +1,22 @@
-// Shared look for Intro / VerdictCard / ThumbTemplate. Branding is a PROP everywhere so the
-// real channel identity (name, tagline, accent) swaps in later — the channel has no name yet,
-// so these are neutral placeholders.
+// Shared look for Intro / VerdictCard / ThumbTemplate. Branding is a PROP everywhere so it stays
+// overridable per-episode; DEFAULT_BRANDING carries the channel identity — Senior Skeptic.
+
+import { staticFile } from 'remotion'
 
 export interface Branding {
   channelName: string
   tagline: string
   accent: string // hex
+  logoSrc?: string // resolved url to the channel mark (staticFile output); nobg variant by default
 }
 
 export const DEFAULT_BRANDING: Branding = {
-  channelName: 'РАЗБОР РЕПО',
-  tagline: 'трендовые репозитории на честном тесте',
+  channelName: 'SENIOR SKEPTIC',
+  tagline: 'разбор репо: заслуженно или хайп?',
   accent: '#facc15',
+  // transparent (no plate) mark — sits clean on our dark glow/texture surfaces.
+  // ChannelLogo falls back to the `>_` glyph if this file is missing at render time.
+  logoSrc: staticFile('branding/logo-nobg.svg'),
 }
 
 export const BG = '#0d1117' // GitHub-dark base, matches StarChart
