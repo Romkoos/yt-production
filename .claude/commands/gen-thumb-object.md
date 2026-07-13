@@ -5,20 +5,31 @@ Generate a thumbnail **focal object** — or a full **background scene** — wit
 compositing layer is a follow-up (see below).
 
 **Usage:** `/gen-thumb-object --mode <mode> [--episode <id>] [--scene] [--subject "<text>"] [--model <id>] [--dry-run]`
+· recovery: `/gen-thumb-object [--episode <id>] --mirror-only`
 
 ```bash
 node --import tsx scripts/gen-thumb-object.ts --mode <mode> [--episode <id>] [--scene] \
   [--subject "<text>"] [--model <id>] [--dry-run]
+
+# free, no key, no network — rebuild the render surface from the episode archive
+node --import tsx scripts/gen-thumb-object.ts --episode <id> --mirror-only
 ```
 
-- `--mode` — **required**, one of the three below.
+- `--mode` — **required** (except with `--mirror-only`), one of the three below.
 - `--episode <id>` — default: the newest episode directory.
 - `--scene` — render the full background scene variant instead of the isolated object.
 - `--subject "<text>"` — the brand for `known-logo`, the metaphor for `category-object`.
-  **Required** for both; ignored for `real-avatar`, whose subject is the avatar itself.
+  **Required** for both; ignored for `real-avatar`, whose subject is the avatar itself (so it is
+  not recorded in the log for that mode either — it had no effect on the prompt).
 - `--model <id>` — default `gemini-3-pro-image-preview` (Nano Banana Pro — best logo/text fidelity).
   Use `gemini-2.5-flash-image` for cheap drafts.
 - `--dry-run` — print the exact prompt and exit. No API key read, no network call.
+- `--mirror-only` — copy every archived `scene-*.png` into `remotion/public/gen/<ep>/` and exit.
+  No API key read, no network call, nothing generated: the **free recovery path** for a deleted or
+  never-cloned render surface. Idempotent (a normal run does it first, too).
+
+A value-taking flag rejects a missing value or one that starts with `--` (`--subject --scene` is an
+error, not a request to draw "--scene" at full price).
 
 **Auth:** `GEMINI_API_KEY` from the environment — never logged, never written to disk (same hygiene
 as `GITHUB_TOKEN` in `/assets`' star-history fetch).
@@ -37,25 +48,6 @@ programmatic `ThumbTemplate` render (channel rule — never generative).
 `--dry-run` is the audit surface: it prints the exact prompt for free, so any of these claims can be
 checked without spending a cent or trusting this table.
 
-## Output contract
-
-| Path | Role | Git |
-|---|---|---|
-| `episodes/<ep>/assets/gen/{object,scene}-<mode>-vN.png` | **Archive** — every variant ever generated | ignored |
-| `remotion/public/gen/<ep>/scene-<mode>-vN.png` | **Render surface** — the only tree `staticFile()` resolves | ignored |
-| `episodes/<ep>/assets/gen-log.json` | **Audit/repro record** — prompt, model, mode, subject, outputs, estimated cost per run | **tracked, append-only** |
-
-Only `scene-*` outputs are mirrored to the render surface: `object-*` has no consumer until the
-`ThumbTemplate` object layer ships. **`object-*` outputs begin mirroring to
-`remotion/public/gen/<ep>/` when the `ThumbTemplate` object layer ships.**
-
-`gen-log.json` sits *beside* `gen/`, not inside it — git cannot re-include a file whose parent
-directory is excluded, and `episodes/*/assets/*` excludes `gen/`. See
-`scripts/workspace-hygiene.test.ts`.
-
-**Cleanup:** `remotion/public/gen/<ep>/` is disposable — it can be regenerated from the episode
-archive at any time, so it is safe to delete.
-
 ## Using a scene
 
 The script prints a paste-ready line:
@@ -72,8 +64,34 @@ Cost figures are **estimates** from a hardcoded price table, printed with the da
 recorded. The log stores the exact model per run, so a corrected table can recompute historical
 cost. Never quote them as a billing figure.
 
-## Side-effects
+## Output contract / side-effects
 
-Writes only under `episodes/<ep>/assets/` and `remotion/public/gen/<ep>/`. The only network calls
-are the Gemini API and (first use of `real-avatar`) the GitHub avatar fetch. No third-party repo
-code is executed.
+Writes **only** under `episodes/<ep>/assets/` and `remotion/public/gen/<ep>/`:
+
+| Path | Role | Git |
+|---|---|---|
+| `episodes/<ep>/assets/gen/{object,scene}-<mode>-vN.png` | **Archive** — every variant ever generated; the **source of truth** | ignored |
+| `remotion/public/gen/<ep>/scene-<mode>-vN.png` | **Render surface** — the only tree `staticFile()` resolves | ignored |
+| `episodes/<ep>/assets/gen-log.json` | **Audit/repro record** — prompt, model, mode, subject, outputs, estimated cost per run | **tracked, append-only** |
+
+Only `scene-*` outputs reach the render surface: `object-*` has no consumer until the
+`ThumbTemplate` object layer ships, at which point it starts mirroring too.
+
+`gen-log.json` sits *beside* `gen/`, not inside it — git cannot re-include a file whose parent
+directory is excluded, and `episodes/*/assets/*` excludes `gen/`. It is read and parsed **before**
+the billed API call, so a corrupt log fails while failing is still free. See
+`scripts/workspace-hygiene.test.ts`.
+
+**Cleanup / recovery:** `remotion/public/gen/<ep>/` is disposable — it is a mirror of the archive
+and is safe to delete. Rebuild it for free (no API key, no network, no generation) with:
+
+```bash
+node --import tsx scripts/gen-thumb-object.ts --episode <ep> --mirror-only
+```
+
+A normal run reconciles the mirror first, so the repair also happens implicitly. The archive
+itself is gitignored: if *it* is gone (fresh clone, `git clean -dx`), the images are gone and only
+a paid re-generation brings them back — `gen-log.json` holds the exact prompt/model to reproduce them.
+
+The only network calls are the Gemini API and (first use of `real-avatar`) the GitHub avatar fetch.
+`GEMINI_API_KEY` is never logged or written. No third-party repo code is executed.
