@@ -30,6 +30,8 @@ export const THUMB_ASTRYX_A: ThumbTemplateProps = {
   verdict: 'ГОДНОТА',
   verdictPosition: 'top-right',
   logo: LOGO,
+  hookBlock: true,
+  hookFont: 'unbounded',
   hook: [
     { text: 'Дизайн-система', size: 'md', weight: 700 },
     { text: 'Meta', size: 'xl', accent: true },
@@ -46,6 +48,8 @@ export const THUMB_ASTRYX_B: ThumbTemplateProps = {
   verdictPosition: 'top-right',
   logo: LOGO,
   texture: { text: '$ pnpm install --ignore-scripts', tone: 'dim' },
+  hookBlock: true,
+  hookFont: 'unbounded',
   hook: [
     { text: 'UI для тебя и', size: 'md', weight: 700 },
     { text: 'AI', size: 'xl', accent: true },
@@ -62,6 +66,8 @@ export const THUMB_ASTRYX_C: ThumbTemplateProps = {
   verdictPosition: 'top-right',
   logo: LOGO,
   logoScale: 0.82, // trims the focal tile so the long «переходить?» hero word clears it
+  hookBlock: true,
+  hookFont: 'unbounded',
   hook: [
     { text: 'Стоит', size: 'md', weight: 700 },
     { text: 'переходить?', size: 'lg', accent: true },

@@ -17,7 +17,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { openInBrowser, downscalePng } from './lib/platform'
-import { loadVariants, variantSummary, buildIndexHtml, pickEpisode, type SheetItem } from './lib/thumb-preview'
+import { loadVariants, variantSummary, buildIndexHtml, pickEpisode, blockWidthWarnings, type SheetItem } from './lib/thumb-preview'
 
 const REMOTION_DIR = resolve('remotion')
 const THUMB_COMPOSITION = 'ThumbTemplate'
@@ -59,6 +59,13 @@ function main(): void {
     throw new Error(`no ${variantsPath} — create it (an array of { label, props }) before previewing ${episode}`)
   }
   const variants = loadVariants(JSON.parse(readFileSync(variantsPath, 'utf8')))
+
+  // Say it BEFORE the renders, not after: the sheet is what the host looks at, and a clamped block
+  // renders perfectly happily — just not at the width they typed. Remotion eats the component's own
+  // console.warn on the `still` path, so this is the only place the message can actually land.
+  for (const w of blockWidthWarnings(variants)) {
+    process.stdout.write(`  ! ${w}\n`)
+  }
 
   const previewDir = join(assetsDir, 'preview')
   const indexPath = join(previewDir, 'index.html')

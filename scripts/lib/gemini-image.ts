@@ -22,11 +22,22 @@ const TILE_PRESENTATION =
 const ISOLATED_ON_BLACK =
   'The tile is isolated on a pure black (#000000) background. Nothing else is in the frame.'
 
+// The scene grid is one half of a two-part contract. The other half is ThumbTemplate's hook block,
+// whose right edge is hard-clamped at 60% of the frame (remotion/src/hook-block.ts, TEXT_ZONE_FRACTION).
+// The zones below MUST agree with that number: the text owns 0-60%, the object owns 70-100%, and
+// 60-65% is a gutter nobody builds in. Change one side without the other and the tile lands on the words.
 const SCENE_LAYOUT =
-  'Composition is a strict layout grid for a 16:9 thumbnail background. Place the tile inside the RIGHT ' +
-  'THIRD of the frame, occupying roughly 30% of the frame width, vertically centred. The LEFT TWO THIRDS ' +
-  'must stay dark, empty and uncluttered — that space is reserved for a text overlay added later. Dark ' +
-  'studio background with a soft falloff glow around the tile. No props, no scenery, no clutter.'
+  'Composition is a strict layout grid for a 16:9 thumbnail background. All zones below are measured ' +
+  'as a percentage of the frame width, from the left edge.\n' +
+  '· RIGHT 30% of the frame (from the 70% line to the right edge): the tile lives here, centred in that ' +
+  'band, occupying roughly 28-30% of the frame width, vertically centred in the frame.\n' +
+  '· LEFT 60% of the frame (from the left edge to the 60% line): dark, clean and completely empty — a ' +
+  'deep navy gradient with fine film grain. NO objects, NO bright areas, NO light source and no detail ' +
+  'of any kind in the left 60%: that space is reserved for a text overlay added later.\n' +
+  '· The 60-65% band is a GUTTER: keep it clear. Nothing important sits on either side of it. Only a ' +
+  'soft falloff glow from the tile may reach into it, and any glow, bloom or light streak must be dim ' +
+  'and subtle to the left of the 65% line.\n' +
+  'Dark cinematic studio background, cinematic depth, soft vignette. No props, no scenery, no clutter.'
 
 const NO_TEXT =
   'There must be NO text, NO letters, NO numbers, NO captions and NO wordmarks anywhere in the image.'

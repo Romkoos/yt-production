@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hookText, variantSummary, loadVariants, pickEpisode, buildIndexHtml, type SheetItem } from './thumb-preview'
+import { hookText, variantSummary, loadVariants, pickEpisode, buildIndexHtml, blockWidthWarnings, type SheetItem } from './thumb-preview'
 
 describe('hookText', () => {
   it('joins array hook lines with a space', () => {
@@ -111,5 +111,42 @@ describe('buildIndexHtml', () => {
     // Anchored to the bg field: a bare toContain('—') would pass vacuously, since the em-dash
     // also appears in every variant label ("A — clean right").
     expect(html).toContain('<span class="k">bg</span> —')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The 60%-line guard, surfaced where the host can actually see it.
+//
+// ThumbTemplate clamps the hook block at 60% of the frame and console.warns when it has to — but
+// Remotion does NOT forward browser console output through `remotion still`, which is precisely
+// how /thumbs-preview renders. The in-browser warning is therefore invisible in the one workflow
+// the host uses. So the preview re-checks the same boundary against the same constant, on the CLI
+// side, before it spends a render. Silent shrinking is how a thumbnail quietly stops matching the
+// props the host thinks they set.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('blockWidthWarnings — the host must be told when a variant is clamped', () => {
+  const v = (label: string, props: Record<string, unknown>) => ({ label, props })
+
+  it('says nothing when every variant fits inside the text zone', () => {
+    expect(blockWidthWarnings([v('A', { blockWidth: 563 }), v('B', { blockWidth: 708 })])).toEqual([])
+  })
+
+  it('flags a variant whose block would cross the 60% line, naming it and both widths', () => {
+    const [w] = blockWidthWarnings([v('C — spotlight', { blockWidth: 900 })])
+    expect(w).toMatch(/C — spotlight/)
+    expect(w).toMatch(/900/) // what was asked for
+    expect(w).toMatch(/708/) // what it will actually render at
+    expect(w).toMatch(/60%/)
+  })
+
+  it('ignores variants that never opted into block mode via blockWidth', () => {
+    expect(blockWidthWarnings([v('A', { hook: [] })])).toEqual([])
+  })
+
+  it('agrees with the component: the boundary is the block RIGHT edge (width + padding)', () => {
+    // 708 + 60 === 768 === 1280 * 0.60 exactly — the last legal width, not a warning.
+    expect(blockWidthWarnings([v('edge', { blockWidth: 708 })])).toEqual([])
+    expect(blockWidthWarnings([v('over', { blockWidth: 709 })])).toHaveLength(1)
   })
 })

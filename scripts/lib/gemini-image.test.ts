@@ -41,20 +41,53 @@ describe('buildPrompt — the object variant', () => {
     expect(buildPrompt('known-logo', 'object', 'Meta infinity logo')).toMatch(/pure black/i)
   })
   it('does not impose the scene layout grid', () => {
-    expect(buildPrompt('known-logo', 'object', 'Meta infinity logo')).not.toMatch(/RIGHT THIRD/)
+    const p = buildPrompt('known-logo', 'object', 'Meta infinity logo')
+    expect(p).not.toMatch(/RIGHT 30%/)
+    expect(p).not.toMatch(/GUTTER/i)
   })
 })
 
-describe('buildPrompt — the scene variant', () => {
+// ─────────────────────────────────────────────────────────────────────────────
+// The scene grid is HALF of a contract; the other half is ThumbTemplate's brick,
+// which clamps its right edge at 60% of the frame (see remotion/src/hook-block.ts,
+// TEXT_ZONE_FRACTION). The two numbers only protect against a text/object collision
+// if they agree, so the prompt has to state the zones — and the gutter between them —
+// explicitly. A scene generated without these clauses puts the tile where the words go.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('buildPrompt — the scene variant lays out the frame the brick expects', () => {
   const scene = buildPrompt('known-logo', 'scene', 'Meta infinity logo')
 
-  it('confines the object to the right third at ~30% width', () => {
-    expect(scene).toMatch(/RIGHT THIRD/)
-    expect(scene).toMatch(/30% of the frame width/)
+  it('centres the object in the RIGHT 30% of the frame, at ~28-30% of frame width', () => {
+    expect(scene).toMatch(/RIGHT 30%/)
+    expect(scene).toMatch(/28-30% of the frame width/)
+    expect(scene).toMatch(/vertically centred/i)
   })
-  it('reserves the left two thirds, dark and empty, for the text overlay', () => {
-    expect(scene).toMatch(/LEFT TWO THIRDS/)
+
+  it('reserves the LEFT 60% — dark, clean, empty — for the text overlay', () => {
+    expect(scene).toMatch(/LEFT 60%/)
     expect(scene).toMatch(/text overlay/i)
+    expect(scene).toMatch(/deep navy gradient/i)
+  })
+
+  it('bans objects, bright areas AND a light source from the left 60% — all three, by name', () => {
+    // A dark-but-glowing left half is the failure this clause exists to stop: it reads as "empty"
+    // to the model and eats the hook's contrast at 120px.
+    expect(scene).toMatch(/no objects/i)
+    expect(scene).toMatch(/no bright areas/i)
+    expect(scene).toMatch(/no light source/i)
+  })
+
+  it('declares the 60-65% GUTTER and lets nothing but soft glow into it', () => {
+    expect(scene).toMatch(/60-65%/)
+    expect(scene).toMatch(/GUTTER/i)
+    expect(scene).toMatch(/soft.{0,20}glow/i)
+    expect(scene).toMatch(/65% line/i) // glow must stay subtle to the left of it
+  })
+
+  it('keeps the cinematic treatment — vignette and depth', () => {
+    expect(scene).toMatch(/vignette/i)
+    expect(scene).toMatch(/cinematic depth/i)
   })
 })
 

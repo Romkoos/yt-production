@@ -1,12 +1,14 @@
-import { AbsoluteFill, Img, staticFile } from 'remotion'
-import { loadFonts, FONT_FAMILY } from './loadFonts'
+import { useEffect, useMemo, useState } from 'react'
+import { AbsoluteFill, Img, staticFile, delayRender, continueRender, cancelRender } from 'remotion'
+import { loadFonts, FONT_FAMILY, HOOK_FONT_FAMILY, HOOK_FONT_WEIGHT } from './loadFonts'
 import { ChannelLogo } from './ChannelLogo'
 import { BG, DEFAULT_BRANDING, verdictStyle } from './theme'
-import type { HookLine, TermTone, ThumbLayout, ThumbLogo, ThumbTemplateProps, VerdictPosition } from './thumb-schema'
+import { fitLinesToBlock, clampBlockWidth, REF_SIZE } from './hook-block'
+import type { HookFont, HookLine, TermTone, ThumbLayout, ThumbLogo, ThumbTemplateProps, VerdictPosition } from './thumb-schema'
 
 // Prop types + the Zod schema live in ./thumb-schema (the single source of truth used both here
 // and by Root.tsx to render Studio's GUI controls). Re-exported for existing importers.
-export type { HookLine, TermTone, ThumbLayout, ThumbLogo, ThumbTemplateProps, VerdictPosition }
+export type { HookFont, HookLine, TermTone, ThumbLayout, ThumbLogo, ThumbTemplateProps, VerdictPosition }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ThumbTemplate — still 1280×720 YouTube thumbnail. Round-3 redesign.
@@ -37,6 +39,78 @@ export type { HookLine, TermTone, ThumbLayout, ThumbLogo, ThumbTemplateProps, Ve
 const SIZE: Record<HookLine['size'], number> = { xl: 156, lg: 108, md: 66 }
 const CANVAS = { w: 1280, h: 720 }
 const PAD = 60
+
+// ── The hook brick (hookBlock) ────────────────────────────────────────────────
+// Every line is drawn at the size that makes its rendered width equal blockWidth, so the block
+// comes out as a solid justified mass — short lines huge, long lines small. Sizing math (and the
+// 60%-line clamp that keeps the block off the object) lives in ./hook-block, pure and unit-tested.
+
+const DEFAULT_BLOCK_WIDTH = Math.round(CANVAS.w * 0.44) // 563px
+const DEFAULT_LINE_SCALE_RATIO = 2
+const BLOCK_TRACKING = -0.02 // em — uppercase wants tighter tracking to read as one mass
+const BLOCK_LINE_HEIGHT = 0.95 // near-zero leading: the lines are meant to touch
+
+/** What we DRAW is what we must MEASURE. Uppercasing via CSS `text-transform` would change the
+ *  rendered width without changing the string measureText sees, and every line would justify to
+ *  the wrong size — so the transform happens here, once, and the result is both measured and drawn. */
+function blockText(text: string, uppercase: boolean): string {
+  return uppercase ? text.toUpperCase() : text
+}
+
+/** Glyph widths at REF_SIZE, via canvas measureText. Tracking is applied to the context too:
+ *  it is part of the rendered width, and both scale linearly with font size, so the ratio the
+ *  sizing math relies on holds. */
+function measureAtRefSize(texts: string[], family: string, weight: number): number[] {
+  const ctx = document.createElement('canvas').getContext('2d')
+  if (!ctx) throw new Error('ThumbTemplate: no 2d canvas context — cannot measure the hook block')
+  ctx.font = `${weight} ${REF_SIZE}px ${family}`
+  // `letterSpacing` is a Chrome canvas property (Remotion renders in Chrome) that this TS DOM lib
+  // does not type yet. Without it the measured width omits tracking and the block overshoots.
+  ;(ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${BLOCK_TRACKING * REF_SIZE}px`
+  return texts.map((t) => ctx.measureText(t).width)
+}
+
+/** Measure once the fonts are actually ready, holding the render meanwhile.
+ *
+ *  The gate is the whole point: measuring before the face has loaded measures the FALLBACK face,
+ *  which is a different width per glyph — the block would justify to sizes that are simply wrong,
+ *  and on a still render nothing would ever correct them. Returns null until the sizes are known. */
+function useBlockSizes(
+  texts: string[],
+  family: string,
+  weight: number,
+  blockWidth: number,
+  maxLineScaleRatio: number,
+  enabled: boolean,
+): number[] | null {
+  const [sizes, setSizes] = useState<number[] | null>(null)
+  // Studio edits props live, so re-measure whenever anything that moves a glyph changes.
+  const key = JSON.stringify([texts, family, weight, blockWidth, maxLineScaleRatio])
+
+  useEffect(() => {
+    if (!enabled || texts.length === 0) return
+    let done = false
+    const handle = delayRender('Measuring the hook block')
+    const release = () => {
+      if (done) return
+      done = true
+      continueRender(handle)
+    }
+
+    loadFonts()
+      .then(() => document.fonts.ready)
+      .then(() => {
+        setSizes(fitLinesToBlock(measureAtRefSize(texts, family, weight), blockWidth, { maxLineScaleRatio }))
+        release()
+      })
+      .catch((err) => cancelRender(err))
+
+    return release
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, enabled])
+
+  return sizes
+}
 
 // Per-layout config: logo size + centre (fraction of canvas) + hook vertical.
 const LAYOUT: Record<ThumbLayout, { logoW: number; cx: number; cy: number; hookTop: number | string; hookTranslateY: boolean }> = {
@@ -169,12 +243,29 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
   bgImage,
   texture,
   branding = DEFAULT_BRANDING,
+  hookBlock = true,
+  blockWidth = DEFAULT_BLOCK_WIDTH,
+  maxLineScaleRatio = DEFAULT_LINE_SCALE_RATIO,
+  hookUppercase = true,
+  hookFont = 'unbounded',
 }) => {
   loadFonts()
   const acc = accent ?? branding.accent
   const glow = glowColor ?? acc
   const cfg = LAYOUT[layout]
   const logoW = cfg.logoW * logoScale // focal size = layout base × live scale
+
+  // No collision BY GEOMETRY: the block's right edge is clamped to the 60% line, which is where the
+  // scene contract stops the text zone (gen-thumb-object --scene reserves 60-65% as a gutter and
+  // puts the object past 70%). The clamp is code, not convention, because blockWidth is a live
+  // Studio slider — a comment saying "don't cross 60%" does not stop a drag.
+  const hookFamily = HOOK_FONT_FAMILY[hookFont]
+  const hookWeight = HOOK_FONT_WEIGHT[hookFont]
+  const block = useMemo(() => clampBlockWidth(blockWidth, { padding: PAD, frameWidth: CANVAS.w }), [blockWidth])
+  if (block.warning) console.warn(block.warning)
+
+  const blockLines = useMemo(() => hook.map((l) => blockText(l.text, hookUppercase)), [hook, hookUppercase])
+  const blockSizes = useBlockSizes(blockLines, hookFamily, hookWeight, block.blockWidth, maxLineScaleRatio, hookBlock)
 
   // Layer 1 — background: programmatic gradient anchored on the logo.
   const background: React.CSSProperties = {
@@ -239,33 +330,44 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
         <span style={{ fontSize: 36, fontWeight: 700, color: '#e6edf3', textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>{repoName}</span>
       </div>
 
-      {/* text (1) — hook, huge */}
+      {/* text (1) — hook. In block mode this is the BRICK: a justified mass whose right edge is
+          pinned to `block.blockWidth` and can never reach the object. Line breaks stay exactly as
+          the host wrote them (HookLine[]); only the sizes are computed, so `line.size` is ignored
+          here. `accent`, the shadow and the line colours carry over from the free-size mode. */}
       <div
         style={{
           position: 'absolute',
           left: PAD,
-          right: 640,
+          ...(hookBlock ? { width: block.blockWidth } : { right: 640 }),
           top: cfg.hookTop,
           transform: cfg.hookTranslateY ? 'translateY(-50%)' : undefined,
           display: 'flex',
           flexDirection: 'column',
-          gap: 2,
+          gap: hookBlock ? 0 : 2,
         }}
       >
-        {hook.map((line, i) => (
-          <span
-            key={i}
-            style={{
-              fontSize: SIZE[line.size],
-              fontWeight: line.weight ?? 700,
-              lineHeight: 1.0,
-              color: line.accent ? acc : '#f4f8fb',
-              textShadow: '0 4px 26px rgba(0,0,0,0.6)',
-            }}
-          >
-            {line.text}
-          </span>
-        ))}
+        {hook.map((line, i) => {
+          // Until the fonts load, blockSizes is null — the render is held by delayRender, so this
+          // fallback never reaches a captured frame; it only keeps the first paint sane.
+          const size = hookBlock ? (blockSizes?.[i] ?? SIZE[line.size]) : SIZE[line.size]
+          return (
+            <span
+              key={i}
+              style={{
+                fontFamily: hookBlock ? hookFamily : FONT_FAMILY,
+                fontSize: size,
+                fontWeight: hookBlock ? hookWeight : (line.weight ?? 700),
+                lineHeight: hookBlock ? BLOCK_LINE_HEIGHT : 1.0,
+                letterSpacing: hookBlock ? BLOCK_TRACKING * size : undefined,
+                whiteSpace: 'nowrap',
+                color: line.accent ? acc : '#f4f8fb',
+                textShadow: '0 4px 26px rgba(0,0,0,0.6)',
+              }}
+            >
+              {hookBlock ? blockLines[i] : line.text}
+            </span>
+          )
+        })}
       </div>
 
       {/* text (2) — verdict sticker (out of the bottom-right timestamp zone) */}
