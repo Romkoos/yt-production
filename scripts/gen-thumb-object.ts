@@ -153,11 +153,18 @@ function reconcileMirror(episode: string): string[] {
  *  log has to name itself, because `Unexpected token }` alone tells the host nothing. */
 function readGenLog(logPath: string): GenLog | null {
   if (!existsSync(logPath)) return null
+  let parsed: unknown
   try {
-    return JSON.parse(readFileSync(logPath, 'utf8')) as GenLog
+    parsed = JSON.parse(readFileSync(logPath, 'utf8'))
   } catch (e) {
     throw new Error(`${logPath} is not valid JSON — fix or delete it: ${(e as Error).message}`)
   }
+  // Valid JSON of the WRONG shape is the dangerous case: `runs` would read as undefined, and the
+  // append would write a fresh log over the history it failed to understand. Refuse instead.
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as GenLog).runs)) {
+    throw new Error(`${logPath} is not a gen-log (expected { episode, runs: [...] }) — refusing to overwrite it`)
+  }
+  return parsed as GenLog
 }
 
 /** The real ImageGenerator. The ONLY place the SDK is touched. */
