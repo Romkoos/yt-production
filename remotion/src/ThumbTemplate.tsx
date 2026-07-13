@@ -11,6 +11,8 @@ import {
   VERDICT_BADGE_PAD_Y,
   VERDICT_LINE_BOX,
   REF_SIZE,
+  lineRuns,
+  runText,
 } from './hook-block'
 import type { HookFont, HookLine, TermTone, ThumbLayout, ThumbLogo, ThumbTemplateProps, VerdictPosition } from './thumb-schema'
 
@@ -56,15 +58,12 @@ const PAD = 60
 const DEFAULT_BLOCK_WIDTH = Math.round(CANVAS.w * 0.44) // 563px
 const DEFAULT_LINE_SCALE_RATIO = 2
 const BLOCK_TRACKING = -0.02 // em — uppercase wants tighter tracking to read as one mass
-const BLOCK_LINE_HEIGHT = 0.95 // near-zero leading: the lines are meant to touch
+// Leading for the brick. 0.95 (lines literally touching) was tuned on two-line hooks; at three and
+// four lines the block reads as a solid slab and the words stop separating. Tunable per variant —
+// it must be ONE value, because the brick's drawn line box and its MEASURED height (which the
+// in-brick badge and the clamp both depend on) are computed from it.
+const DEFAULT_BLOCK_LINE_HEIGHT = 1.1
 const DEFAULT_VERDICT_GAP = 24 // gap between the brick's last hook line and an in-brick badge
-
-/** What we DRAW is what we must MEASURE. Uppercasing via CSS `text-transform` would change the
- *  rendered width without changing the string measureText sees, and every line would justify to
- *  the wrong size — so the transform happens here, once, and the result is both measured and drawn. */
-function blockText(text: string, uppercase: boolean): string {
-  return uppercase ? text.toUpperCase() : text
-}
 
 /** Glyph widths at REF_SIZE, via canvas measureText. `tracking` is applied to the context too:
  *  it is part of the rendered width, and both scale linearly with font size, so the ratio the
@@ -315,6 +314,7 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
   hookFont = 'unbounded',
   objectInScene = false,
   verdictGap = DEFAULT_VERDICT_GAP,
+  hookLineHeight = DEFAULT_BLOCK_LINE_HEIGHT,
 }) => {
   loadFonts()
   const acc = accent ?? branding.accent
@@ -331,7 +331,13 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
   const block = useMemo(() => clampBlockWidth(blockWidth, { padding: PAD, frameWidth: CANVAS.w }), [blockWidth])
   if (block.warning) console.warn(block.warning)
 
-  const blockLines = useMemo(() => hook.map((l) => blockText(l.text, hookUppercase)), [hook, hookUppercase])
+  // The runs are the single source: what is drawn is `hookRuns`, what is measured is those same runs
+  // joined. Derive the second from the first and the two can never drift.
+  const hookRuns = useMemo(
+    () => hook.map((l) => lineRuns(l.text, hookBlock && hookUppercase)),
+    [hook, hookBlock, hookUppercase],
+  )
+  const blockLines = useMemo(() => hookRuns.map(runText), [hookRuns])
   const inBrick = verdictPosition === 'in-brick'
 
   // Measurement is needed for the brick's sizes AND for the in-brick badge's fit (which depends on
@@ -347,7 +353,7 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
 
   // The sticker hangs off the bottom of the hook column, so it has to know how tall the hook is.
   const lineSizes = hook.map((line, i) => (hookBlock ? (blockSizes?.[i] ?? SIZE[line.size]) : SIZE[line.size]))
-  const brickHeight = lineSizes.reduce((sum, s) => sum + s * (hookBlock ? BLOCK_LINE_HEIGHT : 1.0), 0)
+  const brickHeight = lineSizes.reduce((sum, s) => sum + s * (hookBlock ? hookLineHeight : 1.0), 0)
 
   const verdictFit =
     inBrick && metrics
@@ -490,14 +496,21 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
                 fontFamily: hookBlock ? hookFamily : FONT_FAMILY,
                 fontSize: size,
                 fontWeight: hookBlock ? hookWeight : (line.weight ?? 700),
-                lineHeight: hookBlock ? BLOCK_LINE_HEIGHT : 1.0,
+                lineHeight: hookBlock ? hookLineHeight : 1.0,
                 letterSpacing: hookBlock ? BLOCK_TRACKING * size : undefined,
                 whiteSpace: 'nowrap',
+                // The line-level colour is the run's default; a `*…*` run overrides it. So
+                // `accent: true` still paints the whole line, and a marked run inside an
+                // otherwise-cool line still comes out hot.
                 color: line.accent ? acc : '#f4f8fb',
                 textShadow: '0 4px 26px rgba(0,0,0,0.6)',
               }}
             >
-              {hookBlock ? blockLines[i] : line.text}
+              {hookRuns[i].map((run, j) => (
+                <span key={j} style={run.accent ? { color: acc } : undefined}>
+                  {run.text}
+                </span>
+              ))}
             </span>
           )
         })}

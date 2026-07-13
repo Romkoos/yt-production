@@ -1,5 +1,52 @@
 import { describe, it, expect } from 'vitest'
-import { fitLinesToBlock, clampBlockWidth, fitVerdictInBrick, verdictBadgeHeight, verdictTextWidth, VERDICT_BADGE_PAD_X, MIN_VERDICT_FONT, TEXT_ZONE_FRACTION, REF_SIZE } from './hook-block'
+import { fitLinesToBlock, clampBlockWidth, fitVerdictInBrick, verdictBadgeHeight, verdictTextWidth, VERDICT_BADGE_PAD_X, MIN_VERDICT_FONT, TEXT_ZONE_FRACTION, REF_SIZE, parseAccentRuns, lineRuns, runText } from './hook-block'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Accent runs. The load-bearing property is not the colouring — it is that the
+// markers NEVER reach the measured string. Justification sizes each line so its
+// rendered width equals blockWidth; if `*` survived into what measureText sees,
+// every marked line would be sized for glyphs the browser never paints.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('accent runs', () => {
+  it('splits a line into accented and plain runs', () => {
+    expect(parseAccentRuns('*7 440* звёзд')).toEqual([
+      { text: '7 440', accent: true },
+      { text: ' звёзд', accent: false },
+    ])
+  })
+
+  it('leaves marker-free text as one plain run', () => {
+    expect(parseAccentRuns('за неделю')).toEqual([{ text: 'за неделю', accent: false }])
+  })
+
+  it('strips the markers from the measured text — the invariant', () => {
+    for (const s of ['*7 440* звёзд', '0 *коммитов*', 'a *b* c *d*', '*всё целиком*', 'без меток']) {
+      expect(runText(parseAccentRuns(s))).toBe(s.replace(/\*/g, ''))
+    }
+  })
+
+  it('renders a literal asterisk when escaped, and never as a marker', () => {
+    const runs = parseAccentRuns('5 \\* 3')
+    expect(runText(runs)).toBe('5 * 3')
+    expect(runs.every((r) => !r.accent)).toBe(true)
+  })
+
+  it('accents to end of line when a marker is left unclosed', () => {
+    expect(parseAccentRuns('обещали *приватность')).toEqual([
+      { text: 'обещали ', accent: false },
+      { text: 'приватность', accent: true },
+    ])
+  })
+
+  it('uppercases the runs, not the markers — drawn text still equals measured text', () => {
+    const runs = lineRuns('*7 440* звёзд', true)
+    expect(runs).toEqual([
+      { text: '7 440', accent: true },
+      { text: ' ЗВЁЗД', accent: false },
+    ])
+    expect(runText(runs)).toBe('7 440 ЗВЁЗД')
+  })
+})
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The brick: every hook line is scaled so its RENDERED width equals the block
