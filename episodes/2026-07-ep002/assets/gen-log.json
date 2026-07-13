@@ -1,0 +1,19 @@
+{
+  "episode": "2026-07-ep002",
+  "runs": [
+    {
+      "at": "2026-07-13T20:14:41.171Z",
+      "mode": "real-avatar",
+      "variant": "scene",
+      "model": "gemini-3-pro-image-preview",
+      "sceneAccent": "violet",
+      "prompt": "Subject: the logo shown in the attached reference image.\n\nThe attached reference image is the EXACT logo. Reproduce it verbatim: do NOT redraw, restyle, re-letter, re-interpret or \"improve\" it. Preserve its glyph shapes, proportions and colours precisely. Only the presentation — lighting, depth, the tile — is yours to render.\n\nPresent the subject as a single 3D app-icon tile: a BRIGHT glowing white tile with a strong emissive rim light, vivid and luminous against the dark scene — rounded-square, with real depth and a grounded contact shadow, floating and very slightly rotated.\n\nComposition is a strict layout grid for a 16:9 thumbnail background. All zones below are measured as a percentage of the frame width, from the left edge.\n· RIGHT 30% of the frame (from the 70% line to the right edge): the tile lives here, centred in that band and vertically centred in the frame. The tile occupies 26-28% of the frame WIDTH and no more than 55% of the frame HEIGHT, fully inside the frame with clear margins above and below — never cropped, never touching the top or bottom edge.\n· Light the RIGHT zone dramatically: dramatic accent lighting around the tile — vivid glow, light streaks and energy wisps radiating from behind it, cinematic bloom. This is the focal point of the image and it should look powerful and alive. The accent light colour is violet. All of it is confined to the right of the 65% line.\n· LEFT 60% of the frame (from the left edge to the 60% line): dark, clean and completely empty — a deep navy gradient with fine film grain. NO objects, NO bright areas, NO light source and no detail of any kind in the left 60%: that space is reserved for a text overlay added later.\n· The 60-65% band is a GUTTER: keep it clear. Nothing important sits on either side of it. Only a soft falloff glow from the tile may reach into it, and any glow, bloom or light streak must be dim and subtle to the left of the 65% line.\nDark cinematic studio background, cinematic depth, soft vignette. No props, no scenery, no clutter.\n\nThere must be NO text, NO letters, NO numbers, NO captions and NO wordmarks anywhere in the image.",
+      "referenceImage": "episodes/2026-07-ep002/assets/logo-Zackriya-Solutions.png",
+      "outputs": [
+        "scene-real-avatar-v1.png"
+      ],
+      "estimatedCostUsd": 0.134,
+      "pricesAsOf": "2026-07-13"
+    }
+  ]
+}
