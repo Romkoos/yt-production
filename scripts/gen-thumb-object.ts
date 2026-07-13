@@ -269,7 +269,14 @@ async function main(): Promise<void> {
     const buf = Buffer.from(image.data, 'base64')
 
     // ARCHIVE — the episode's permanent record.
-    writeFileSync(join(genDir, file), buf)
+    // `existing` was read once, before the API call, so a concurrent run (or a manual file drop)
+    // can land on this same vN while we were waiting on Gemini. Refuse rather than clobber: these
+    // are billed artifacts, and a silent overwrite destroys one we already paid for.
+    const archivePath = join(genDir, file)
+    if (existsSync(archivePath)) {
+      throw new Error(`output collision: ${file} appeared during the run — re-run to get a fresh version`)
+    }
+    writeFileSync(archivePath, buf)
     outputs.push(file)
 
     // RENDER SURFACE — the only tree staticFile() can resolve. Scenes only: `object-*` has no
