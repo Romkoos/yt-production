@@ -101,6 +101,13 @@ the host's Screen Studio checklist) and scaffolds `episodes/<ep>/assets/MEME_LIS
 `**Источник:**`) with a concrete meme suggestion and a real download link — suggestions + links
 only, never auto-download copyrighted memes.
 
+SHOTLIST item N links to `REPRO.md#scene-N` — the quick checklist points at the reproduction
+protocol's matching SCENE block (exact commands, what appears on screen, WAIT/CUT, reset). This
+1:1 mapping holds because both are numbered from the same ordered `[СКРИНКАСТ]` cue list;
+`REPRO.md` (from `/review-repo` + `/script`) should already exist, so the links resolve. **Note:**
+re-running `gen-prep-docs.ts` rewrites `MEME_LIST.md` from scratch — if you regenerate SHOTLIST
+after the host filled MEME_LIST, restore MEME_LIST (`git checkout -- …/MEME_LIST.md`).
+
 ---
 
 ## Step 5 — Update STATE.md
@@ -113,7 +120,8 @@ only, never auto-download copyrighted memes.
   Manual phase — подготовка к записи:
   - [ ] Музыка: сгенерировать трек в Suno
   - [ ] Голос: записать озвучку по script.md
-  - [ ] Скринкаст: снять по SHOTLIST.md (Screen Studio)
+  - [ ] Скринкаст: снять по SHOTLIST.md → REPRO.md (точные команды/что на экране/WAIT-CUT)
+  - [ ] Проверка REPRO.md: пройти SETUP с нуля, свериться с prepared states
   - [ ] Мемы и звуки: скачать по assets/MEME_LIST.md
   - [ ] Монтаж в DaVinci Resolve
   - [ ] Сверка таймкодов: записать реальные таймкоды в STATE.md/script.md
@@ -126,9 +134,9 @@ Leave every other field/section untouched — this command owns only the assets 
 
 ## Step 6 — Record metrics
 
-Append a `phase_metrics` row (phase `assets`), same inline `db/client.ts` pattern as
-`review-repo.md` / `script.md` Step 7. `notes` = one line (tier used + point count + which
-scenes rendered).
+Append a `phase_metrics` row (phase `assets`), same inline `db/client.ts` pattern as the
+metrics step in `review-repo.md` / `script.md`. `notes` = one line (tier used + point count +
+which scenes rendered).
 
 ---
 

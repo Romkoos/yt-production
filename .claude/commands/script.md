@@ -99,29 +99,62 @@ film*, never *when* — timing for both is resolved in later phases, not here.
 
 ---
 
-## Step 3 — Update STATE.md
+## Step 3 — Refine the reproduction protocol (REPRO.md scenes)
+
+`/review-repo` already created `episodes/<ep>/REPRO.md` with `## Prepared states`,
+`## SETUP`, and `## Failure recipes`. Now fill the two parts that need the script — so
+the host can **record every scene without understanding the repo internals**:
+
+- **`## Scenes`** — write **one block per `[СКРИНКАСТ]` cue** in `script.md`, in shooting
+  order. The block for cue N carries the anchor `<a id="scene-N"></a>` — `SHOTLIST.md`
+  item N links to `#scene-N`, so keep the **count and order identical** to the
+  `[СКРИНКАСТ]` cues or the numbering desyncs. Fill each block from `report.md` + the
+  sandbox:
+  - **Do:** the commands / clicks to perform, verbatim.
+  - **On screen:** what will appear, so the host knows it worked.
+  - **Wait/Cut:** perf/timing notes (`build takes ~90s — start recording after`), or `—`.
+  - **Reset:** how to re-shoot if re-shootable (`delete node_modules to re-record the
+    install scene`), or `—` if idempotent.
+  Cross-link any failure-demo scene to its `## Failure recipes` entry. Clock (b): these are
+  semantic shooting instructions, **never** timecodes.
+- **`Recording time budget`** (the top line) — the estimated total recording time if the
+  protocol is followed. Call out any single long wait (e.g. a ~70s test run) and whether
+  one capture can serve two scenes.
+
+**Acceptance test for this file:** the host can record every scene without making a
+decision that isn't written in `REPRO.md`. If a scene needs a choice `REPRO.md` doesn't
+answer, it's incomplete — fix it here.
+
+If `episodes/<ep>/REPRO.md` is missing (an episode from before this artifact existed),
+create it from `templates/REPRO.md` and fill **all** sections, not just the scenes.
+
+---
+
+## Step 4 — Update STATE.md
 
 Edit `episodes/<ep>/STATE.md`:
 
 - Frontmatter: set `current_phase: script`, `phase_status: done`, and `updated:`
   to today's date (`YYYY-MM-DD`).
-- `## Artifacts`: update the `script.md` line to `script.md: present`.
+- `## Artifacts`: update the `script.md` line to `script.md: present`, and the
+  `REPRO.md` line to `REPRO.md: present` (scenes now filled in — Step 3).
 - `## Next action`: replace it with `Manual phase: record voice + screencast, edit
   in Resolve, then reconcile timecodes`.
 - `## Phase checklist`: check the `script` box (`- [x] script`).
 
 Leave every other field and section (repo_url, title, number, verdict,
 youtube_video_id, `report.md`/`sandbox/`/`assets/` artifact lines, the rest of
-the checklist) untouched — this command only owns the script phase.
+the checklist) untouched — this command owns the script phase and the REPRO scene
+blocks (Step 3), nothing else.
 
 ---
 
-## Step 4 — Record metrics
+## Step 5 — Record metrics
 
 Append a `phase_metrics` row for this run (phase `script`). The `episodes` row
-for this episode should already exist from `/review-repo`'s Step 7 — only insert
+for this episode should already exist from `/review-repo`'s Step 8 — only insert
 it if it's somehow missing. Track `startedAt` from when you began Step 1 and
-`endedAt` when Step 3 finishes; count `iterations` as 1 unless you had to redo a
+`endedAt` when Step 4 finishes; count `iterations` as 1 unless you had to redo a
 beat because the report was ambiguous or incomplete.
 
 Run something shaped like this (adapt the values — episode id, number from
@@ -170,6 +203,8 @@ the tables don't exist.
 
 This command writes **only**:
 - `episodes/<ep>/script.md` — new file, filled in from `report.md`.
+- `episodes/<ep>/REPRO.md` — updated in place: the `## Scenes` blocks (one per
+  `[СКРИНКАСТ]` cue) and the `Recording time budget` line (Step 3).
 - `episodes/<ep>/STATE.md` — updated in place (script phase fields only).
 - `db/tracker.sqlite` — one new `phaseMetrics` row (and the `episodes` row, only
   if it didn't already exist).
