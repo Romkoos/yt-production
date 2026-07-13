@@ -4,20 +4,32 @@ Generate a thumbnail **focal object** — or a full **background scene** — wit
 (Nano Banana). Generated *scenes* feed `ThumbTemplate`'s `bgImage` prop today; the isolated-object
 compositing layer is a follow-up (see below).
 
-**Usage:** `/gen-thumb-object --mode <mode> [--episode <id>] [--scene] [--subject "<text>"] [--model <id>] [--dry-run]`
+**Usage:** `/gen-thumb-object --mode <mode> [--episode <id>] [--scene] [--apply] [--subject "<text>"] [--model <id>] [--dry-run]`
 · recovery: `/gen-thumb-object [--episode <id>] --mirror-only`
 
-```bash
-node --import tsx scripts/gen-thumb-object.ts --mode <mode> [--episode <id>] [--scene] \
-  [--subject "<text>"] [--model <id>] [--dry-run]
+The common paths have short pnpm scripts — **use these** (they are the stable surface a future UI
+sits on). Each defaults to the newest episode; pass `-- --episode <id>` for another:
 
-# free, no key, no network — rebuild the render surface from the episode archive
-node --import tsx scripts/gen-thumb-object.ts --episode <id> --mirror-only
+```bash
+pnpm scene           # --mode real-avatar --scene --apply   (BILLED)
+pnpm scene:dry       # --mode real-avatar --scene --dry-run (free: prints the prompt, no key)
+pnpm scene:noapply   # --mode real-avatar --scene           (BILLED; leaves thumb-variants.json alone)
+pnpm scene:mirror    # --mirror-only                        (free: rebuild the render surface)
+```
+
+The full CLI, for the modes/flags the scripts do not cover:
+
+```bash
+npx tsx scripts/gen-thumb-object.ts --mode <mode> [--episode <id>] [--scene] [--apply] \
+  [--subject "<text>"] [--model <id>] [--dry-run]
 ```
 
 - `--mode` — **required** (except with `--mirror-only`), one of the three below.
 - `--episode <id>` — default: the newest episode directory.
 - `--scene` — render the full background scene variant instead of the isolated object.
+- `--apply` — write the generated scene into **every** variant of the episode's
+  `thumb-variants.json` (`bgImage` + `objectInScene: true`). `--scene` only; rejected with
+  `--dry-run` / `--mirror-only`, which generate nothing to apply. See **Applying a scene** below.
 - `--subject "<text>"` — the brand for `known-logo`, the metaphor for `category-object`.
   **Required** for both; ignored for `real-avatar`, whose subject is the avatar itself (so it is
   not recorded in the log for that mode either — it had no effect on the prompt).
@@ -48,17 +60,38 @@ programmatic `ThumbTemplate` render (channel rule — never generative).
 `--dry-run` is the audit surface: it prints the exact prompt for free, so any of these claims can be
 checked without spending a cent or trusting this table.
 
-## Using a scene
+## Applying a scene
 
-The script prints a paste-ready line:
+`--apply` (which `pnpm scene` passes) closes the copy-paste gap: after a successful `--scene` run it
+writes **`bgImage` + `objectInScene: true` into every variant** of
+`episodes/<ep>/assets/thumb-variants.json` and prints what changed.
 
 ```
-✓ scene-real-avatar-v1.png   (gemini-3-pro-image-preview, ~$0.13 — estimate, prices as of 2026-07-13)
-  bgImage: "gen/2026-07-ep001/scene-real-avatar-v1.png"
+✓ scene-real-avatar-v3.png   (gemini-3-pro-image-preview, ~$0.13 — estimate, prices as of 2026-07-13)
+
+Applied → episodes/2026-07-ep001/assets/thumb-variants.json
+  ✓ A — clean right: bgImage …scene-real-avatar-v2.png → …scene-real-avatar-v3.png
+  ✓ B — hero: bgImage → …scene-real-avatar-v3.png, objectInScene → true
+
+Next: pnpm thumbs
 ```
 
-Paste `bgImage` into a variant's `props` in `episodes/<ep>/assets/thumb-variants.json`, then run
-`/thumbs-preview` — the contact sheet prints each variant's background beneath it.
+So the whole thumbnail leg is `pnpm scene && pnpm thumbs`.
+
+Three rules it holds to:
+
+- **It edits that file; it never authors it.** A missing or malformed `thumb-variants.json` is a
+  refusal, never a scaffold — and the check runs **before** the billed call (like the gen-log parse),
+  so it fails while failing is still free. Formatting and key order survive the round-trip.
+- **The pair is written together.** A scene BAKES the focal object into the background, and
+  `ThumbTemplate` draws its own `LogoTile` unless `objectInScene` is set — a `bgImage` written alone
+  renders the object twice, in two places.
+- **Every variant, not a chosen one.** Variants are an A/B over ONE variable; a background applied
+  to a subset would silently make it a second variable and invalidate the comparison.
+
+`pnpm scene:noapply` (or plain `--scene`) keeps the manual path: it prints both paste-ready lines
+and leaves the file alone. If a single response returns several images, `--apply` uses the first and
+prints the others' `bgImage` lines rather than silently discarding work that was paid for.
 
 Cost figures are **estimates** from a hardcoded price table, printed with the date they were
 recorded. The log stores the exact model per run, so a corrected table can recompute historical
@@ -73,6 +106,7 @@ Writes **only** under `episodes/<ep>/assets/` and `remotion/public/gen/<ep>/`:
 | `episodes/<ep>/assets/gen/{object,scene}-<mode>-vN.png` | **Archive** — every variant ever generated; the **source of truth** | ignored |
 | `remotion/public/gen/<ep>/scene-<mode>-vN.png` | **Render surface** — the only tree `staticFile()` resolves | ignored |
 | `episodes/<ep>/assets/gen-log.json` | **Audit/repro record** — prompt, model, mode, subject, outputs, estimated cost per run | **tracked, append-only** |
+| `episodes/<ep>/assets/thumb-variants.json` | **`--apply` only** — `bgImage` + `objectInScene` updated in place, in every variant. Never created. | **tracked** |
 
 Only `scene-*` outputs reach the render surface: `object-*` has no consumer until the
 `ThumbTemplate` object layer ships, at which point it starts mirroring too.
@@ -86,7 +120,8 @@ the billed API call, so a corrupt log fails while failing is still free. See
 and is safe to delete. Rebuild it for free (no API key, no network, no generation) with:
 
 ```bash
-node --import tsx scripts/gen-thumb-object.ts --episode <ep> --mirror-only
+pnpm scene:mirror                        # newest episode
+pnpm scene:mirror -- --episode <ep>      # a specific one
 ```
 
 A normal run reconciles the mirror first, so the repair also happens implicitly. The archive

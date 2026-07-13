@@ -35,7 +35,7 @@ If `verdict` is empty in STATE.md frontmatter, read it from the script's Вер�
 ## Step 2 — Fetch real star history
 
 ```bash
-node --import tsx scripts/fetch-star-history.ts --episode <ep>
+pnpm chart -- --episode <ep>
 ```
 
 This fetches the repo's REAL star history via tiered sources (GraphQL `starredAt` → REST
@@ -69,13 +69,13 @@ from the script's hook / `THUMB_HOOKS.md`, `verdict` = this episode's verdict). 
 contact sheet — this is the **final step of `/assets`**:
 
 ```bash
-node --import tsx scripts/thumbs-preview.ts --episode <ep>
+pnpm thumbs -- --episode <ep>
 ```
 
 This renders every variant to `episodes/<ep>/assets/preview/thumb-vN.png` (+ a 120px copy) and
 opens a self-refreshing gallery (`preview/index.html`) for the host to review / A-B test — see
 `/thumbs-preview`. The host then iterates by text feedback (agent edits `thumb-variants.json`,
-re-runs the render; the page updates in ≤2s) or fine-tunes props live in `npx remotion studio`.
+re-runs the render; the page updates in ≤2s) or fine-tunes props live in `pnpm studio`.
 
 All thumbnail text is a programmatic render (channel rule — never generative). Branding is a
 swappable prop; `DEFAULT_BRANDING` carries the channel identity (Senior Skeptic, nobg logo mark).
@@ -89,9 +89,11 @@ monochrome/rounded header mark can still help brand-vs-repo legibility). Not yet
 
 **Generative backgrounds (optional).** `/gen-thumb-object` generates a focal object or a full
 background scene with the Gemini image API. Generated **scenes** are mirrored to
-`remotion/public/gen/<ep>/` and feed `ThumbTemplate`'s `bgImage` prop — paste the path the script
-prints into a variant's `props` in `thumb-variants.json` and re-run the contact sheet. Generated
-**objects** are archived but not yet consumed: the `ThumbTemplate` object layer is a follow-up.
+`remotion/public/gen/<ep>/` and feed `ThumbTemplate`'s `bgImage` prop. `pnpm scene` (= `--scene
+--apply`) writes `bgImage` + `objectInScene: true` into every variant of `thumb-variants.json`
+itself, so the whole leg is **`pnpm scene && pnpm thumbs`** — no copy-paste. It is BILLED (~$0.13);
+`pnpm scene:dry` prints the exact prompt for free. Generated **objects** are archived but not yet
+consumed: the `ThumbTemplate` object layer is a follow-up.
 
 Generated images never contain text (thumbnail text is always a programmatic render) and never
 carry a fabricated brand mark — see `/gen-thumb-object` for the per-mode guarantees and the
@@ -102,7 +104,7 @@ carry a fabricated brand mark — see `/gen-thumb-object` for the per-mode guara
 ## Step 4 — Generate prep docs
 
 ```bash
-node --import tsx scripts/gen-prep-docs.ts --episode <ep>
+pnpm prep -- --episode <ep>
 ```
 
 This writes `episodes/<ep>/SHOTLIST.md` (every `[СКРИНКАСТ]` cue, numbered checkboxes by beat —
@@ -115,7 +117,7 @@ SHOTLIST item N links to `REPRO.md#scene-N` — the quick checklist points at th
 protocol's matching SCENE block (exact commands, what appears on screen, WAIT/CUT, reset). This
 1:1 mapping holds because both are numbered from the same ordered `[СКРИНКАСТ]` cue list;
 `REPRO.md` (from `/review-repo` + `/script`) should already exist, so the links resolve. **Note:**
-re-running `gen-prep-docs.ts` rewrites `MEME_LIST.md` from scratch — if you regenerate SHOTLIST
+re-running `pnpm prep` rewrites `MEME_LIST.md` from scratch — if you regenerate SHOTLIST
 after the host filled MEME_LIST, restore MEME_LIST (`git checkout -- …/MEME_LIST.md`).
 
 ---

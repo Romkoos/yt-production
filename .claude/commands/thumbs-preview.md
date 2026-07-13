@@ -16,7 +16,8 @@ the final step of `/assets`.
 ## What it does
 
 ```bash
-node --import tsx scripts/thumbs-preview.ts [--episode <id>] [--open]
+pnpm thumbs                              # newest episode with a thumb-variants.json
+pnpm thumbs -- --episode <id> --open     # a specific one, force-opened
 ```
 
 The render source is **`episodes/<ep>/assets/thumb-variants.json`** — a tracked array of
@@ -38,9 +39,13 @@ The render source is **`episodes/<ep>/assets/thumb-variants.json`** — a tracke
 1. Run `/thumbs-preview` — the sheet opens.
 2. The host reads it and gives text feedback (e.g. *"v2: hook smaller, logo up"*).
 3. The agent edits `episodes/<ep>/assets/thumb-variants.json` (or the host fine-tunes live in
-   `npx remotion studio`, then the tuned values go back into the JSON) and **re-runs the render
+   `pnpm studio`, then the tuned values go back into the JSON) and **re-runs the render
    step** — same command, no `--open`.
 4. The page self-updates within 2s. Repeat.
+
+A generated background enters the same loop through `pnpm scene` (`/gen-thumb-object --scene
+--apply`), which writes `bgImage` + `objectInScene` into every variant itself — so the full leg is
+`pnpm scene && pnpm thumbs`.
 
 ## Platform note
 
