@@ -165,7 +165,9 @@ Fill these sections now:
   waits on a long install/build/test (e.g. deps already installed, packages already
   built — name each and which work it saves). If a scene will need a **clean** state (the
   install take), say how to get one without destroying the built state (a second clone),
-  so recording order isn't forced.
+  so recording order isn't forced. **Rule of thumb:** materialize a prepared state (a
+  second pre-built clone) only when a scene's natural wait exceeds ~2 minutes; otherwise
+  just document the recipe (a 12-second reinstall doesn't warrant a duplicate clone).
 - **`## SETUP — zero to running`** — exact copy-paste commands from a clean clone to a
   running project, using the flags that **actually worked** (e.g. `--ignore-scripts`), the
   env vars (or "none"), and for **each step** an expected duration + a success indicator

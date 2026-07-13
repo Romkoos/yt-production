@@ -8,7 +8,7 @@
 //
 // Usage: gen-prep-docs.ts --episode <id>
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { extractScreencastCues, extractMemeCues } from './lib/script-cues'
 
@@ -72,6 +72,22 @@ function buildMemeList(episode: string, repo: string, md: string): string {
   return out
 }
 
+// Write the prep docs with the right regeneration policy:
+//   SHOTLIST.md is DERIVED from script.md — always (re)written, so it stays in sync
+//     (and keeps its REPRO scene links current).
+//   MEME_LIST.md is a host-EDITED scaffold — only written when it doesn't exist yet, so
+//     re-running to refresh SHOTLIST never clobbers the host's filled-in meme suggestions.
+export function writePrepDocs(
+  paths: { shotlistPath: string; memePath: string },
+  content: { episode: string; repo: string; md: string },
+): { memeScaffolded: boolean } {
+  const { episode, repo, md } = content
+  writeFileSync(paths.shotlistPath, buildShotlist(episode, repo, md))
+  const memeExists = existsSync(paths.memePath)
+  if (!memeExists) writeFileSync(paths.memePath, buildMemeList(episode, repo, md))
+  return { memeScaffolded: !memeExists }
+}
+
 function main() {
   const episode = arg('--episode')
   if (!episode) throw new Error('--episode <id> is required')
@@ -84,12 +100,15 @@ function main() {
 
   const shotlistPath = join('episodes', episode, 'SHOTLIST.md')
   const memePath = join(assetsDir, 'MEME_LIST.md')
-  writeFileSync(shotlistPath, buildShotlist(episode, repo, md))
-  writeFileSync(memePath, buildMemeList(episode, repo, md))
+  const { memeScaffolded } = writePrepDocs({ shotlistPath, memePath }, { episode, repo, md })
 
   const shots = extractScreencastCues(md).length
   const memes = extractMemeCues(md).length
-  console.log(`[gen-prep-docs] ${episode}: SHOTLIST.md (${shots} shots), assets/MEME_LIST.md (${memes} meme cues + sounds)`)
+  const memeNote = memeScaffolded
+    ? `assets/MEME_LIST.md (${memes} meme cues + sounds, scaffolded)`
+    : `assets/MEME_LIST.md (kept — already present, not overwritten)`
+  console.log(`[gen-prep-docs] ${episode}: SHOTLIST.md (${shots} shots), ${memeNote}`)
 }
 
-main()
+// Run main only when invoked directly, not when imported by tests.
+if (process.argv[1] && process.argv[1].endsWith('gen-prep-docs.ts')) main()
