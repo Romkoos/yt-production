@@ -76,3 +76,120 @@ export function buildPrompt(mode: GenMode, variant: GenVariant, subject?: string
 
   return blocks.join('\n\n')
 }
+
+// ── The API seam ──────────────────────────────────────────────────────────────
+// The orchestrator injects a @google/genai-backed implementation; tests inject a
+// fake. Nothing in the test suite reaches the network.
+
+export interface InlineImage {
+  mimeType: string
+  data: string // base64
+}
+
+export interface GenerateRequest {
+  model: string
+  prompt: string
+  referenceImage?: InlineImage
+}
+
+/** The subset of the @google/genai response we rely on. Every field is optional:
+ *  a blocked or text-only response legitimately omits them, and we must fail loudly
+ *  rather than index into undefined. */
+export interface GenResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string; inlineData?: { mimeType?: string; data?: string } }>
+    }
+  }>
+}
+
+export interface ImageGenerator {
+  generate(req: GenerateRequest): Promise<GenResponse>
+}
+
+/** Pull every image part out of a response.
+ *
+ *  Selection is by PRESENCE of `inlineData`, never by index: the model interleaves text and
+ *  image parts freely ("Here's your tile!" + the image, in either order), so `parts[0]` is not
+ *  the image and `parts[1]` is not either. Indexing is the bug this function exists to prevent. */
+export function extractInlineImages(response: GenResponse): InlineImage[] {
+  const parts = response.candidates?.[0]?.content?.parts ?? []
+  const images: InlineImage[] = []
+  for (const part of parts) {
+    const inline = part.inlineData
+    if (!inline?.data) continue
+    images.push({ mimeType: inline.mimeType ?? 'image/png', data: inline.data })
+  }
+  if (images.length === 0) {
+    throw new Error(
+      'Gemini returned no image part (text-only or blocked response) — check the model id and the prompt',
+    )
+  }
+  return images
+}
+
+// ── Output naming ─────────────────────────────────────────────────────────────
+
+/** The next `vN` for a `<variant>-<mode>-vN.png` output. Each variant/mode pair is numbered
+ *  independently, and gaps are skipped over rather than filled (a deleted v2 stays deleted). */
+export function nextVersion(existingNames: string[], variant: GenVariant, mode: GenMode): number {
+  const re = new RegExp(`^${variant}-${mode}-v(\\d+)\\.png$`)
+  let max = 0
+  for (const name of existingNames) {
+    const m = name.match(re)
+    if (m) max = Math.max(max, Number(m[1]))
+  }
+  return max + 1
+}
+
+// ── Cost ──────────────────────────────────────────────────────────────────────
+
+/** The date the prices below were recorded. Printed with every cost figure — the console is
+ *  where the number is actually read, so the caveat has to travel with it. */
+export const PRICES_AS_OF = '2026-07-13'
+
+/** Per-image output price in USD.
+ *
+ *  THESE ARE ESTIMATES. They were not verified against Google's live pricing page, and image
+ *  pricing moves. gen-log.json records the exact model per run, so a corrected table can always
+ *  recompute historical cost from the log. Never present these as a billing figure. */
+const PRICE_PER_IMAGE_USD: Record<string, number> = {
+  'gemini-3-pro-image-preview': 0.134,
+  'gemini-2.5-flash-image': 0.039,
+}
+
+/** Estimated USD for a run. `null` for an unknown model — no estimate beats a wrong number. */
+export function estimateCostUsd(model: string, imageCount: number): number | null {
+  const unit = PRICE_PER_IMAGE_USD[model]
+  if (unit == null) return null
+  return Number((unit * imageCount).toFixed(4))
+}
+
+// ── The audit log ─────────────────────────────────────────────────────────────
+
+export interface GenLogEntry {
+  at: string // ISO timestamp
+  mode: GenMode
+  variant: GenVariant
+  model: string
+  subject?: string
+  prompt: string // the FULL prompt — this is what makes a run reproducible
+  referenceImage?: string // repo-relative path of the avatar sent, when one was
+  outputs: string[] // basenames written into assets/gen/
+  estimatedCostUsd: number | null
+  pricesAsOf: string
+}
+
+export interface GenLog {
+  episode: string
+  runs: GenLogEntry[]
+}
+
+/** Append one run to the log. Append-only by construction: the existing runs are copied, never
+ *  rewritten or reordered, and the input is not mutated. */
+export function appendGenLog(existing: GenLog | null, episode: string, entry: GenLogEntry): GenLog {
+  return {
+    episode: existing?.episode ?? episode,
+    runs: [...(existing?.runs ?? []), entry],
+  }
+}
