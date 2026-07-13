@@ -46,8 +46,14 @@ function isIgnored(path: string): boolean {
   try {
     execFileSync('git', ['check-ignore', '-q', path], { stdio: 'ignore' })
     return true
-  } catch {
-    return false
+  } catch (err) {
+    // `check-ignore` exits 1 for "not ignored" — that's the only failure this
+    // helper is allowed to swallow. Any other status (128: git missing, cwd
+    // outside a work tree, bad argument, ...) is a real error, and silently
+    // returning false would make the ignore-rule assertions below pass for
+    // the wrong reason instead of failing loudly.
+    if ((err as { status?: number }).status === 1) return false
+    throw err
   }
 }
 
