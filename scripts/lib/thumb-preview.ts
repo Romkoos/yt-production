@@ -13,6 +13,10 @@ import { clampBlockWidth } from '../../remotion/src/hook-block'
 const PAD = 60 // ThumbTemplate's frame padding
 const FRAME_WIDTH = 1280
 
+// Where /gen-thumb-object mirrors its generated scenes. A bgImage under this prefix therefore has
+// the object BAKED IN — which is the whole basis of the double-object check below.
+const GEN_SCENE_PREFIX = 'gen/'
+
 export interface Variant {
   label: string
   props: Record<string, unknown>
@@ -73,6 +77,27 @@ export function variantSummary(props: Record<string, unknown>): { hookText: stri
     verdict: String(props.verdict ?? ''),
     bgImage: typeof props.bgImage === 'string' ? props.bgImage : '',
   }
+}
+
+/** Variants that pair a GENERATED scene with the template's own LogoTile, as host-readable warnings.
+ *
+ *  A `--scene` run bakes the logo tile into the background; ThumbTemplate draws its LogoTile unless
+ *  `objectInScene` is set. Together that is the same logo twice, at two different positions. Nothing
+ *  fails — the render succeeds and quietly ships a doubled object — so the only thing standing
+ *  between the host and a broken thumbnail is being told. */
+export function sceneObjectWarnings(variants: Variant[]): string[] {
+  const warnings: string[] = []
+  for (const { label, props } of variants) {
+    const bg = props.bgImage
+    // Only GENERATED scenes carry a baked-in object. A hand-made texture under public/ does not,
+    // and there the template tile is still the one and only focal object.
+    if (typeof bg !== 'string' || !bg.startsWith(GEN_SCENE_PREFIX)) continue
+    if (props.objectInScene === true) continue
+    warnings.push(
+      `variant "${label}": generated scene + template LogoTile — double object likely; set objectInScene: true`,
+    )
+  }
+  return warnings
 }
 
 /** Parse + shape-validate a thumb-variants.json payload. Authoritative prop validation happens

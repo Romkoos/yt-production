@@ -248,6 +248,7 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
   maxLineScaleRatio = DEFAULT_LINE_SCALE_RATIO,
   hookUppercase = true,
   hookFont = 'unbounded',
+  objectInScene = false,
 }) => {
   loadFonts()
   const acc = accent ?? branding.accent
@@ -282,19 +283,23 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
         </>
       ) : null}
 
-      {/* accent glow behind the logo */}
-      <div
-        style={{
-          position: 'absolute',
-          left: `${cfg.cx * 100}%`,
-          top: `${cfg.cy * 100}%`,
-          width: logoW * 3.4,
-          height: logoW * 3.4,
-          transform: 'translate(-50%, -50%)',
-          background: `radial-gradient(closest-side, ${glow}3a 0%, ${glow}00 70%)`,
-          pointerEvents: 'none',
-        }}
-      />
+      {/* accent glow behind the logo — suppressed with the tile it anchors: a generated scene
+          brings its own lighting, and a second glow blooming at the template's tile position
+          would light up empty background exactly where there is no longer an object. */}
+      {objectInScene ? null : (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${cfg.cx * 100}%`,
+            top: `${cfg.cy * 100}%`,
+            width: logoW * 3.4,
+            height: logoW * 3.4,
+            transform: 'translate(-50%, -50%)',
+            background: `radial-gradient(closest-side, ${glow}3a 0%, ${glow}00 70%)`,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
 
       {/* OPTIONAL faint terminal texture — one short line, low contrast, decoration */}
       {texture ? (
@@ -319,10 +324,14 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
 
       <Grain />
 
-      {/* Layer 2 — the logo (focal object) */}
-      <div style={{ position: 'absolute', left: `${cfg.cx * 100}%`, top: `${cfg.cy * 100}%`, transform: 'translate(-50%, -50%)' }}>
-        <LogoTile logo={logo} size={logoW} glow={glow} accent={acc} rotate={-4} />
-      </div>
+      {/* Layer 2 — the logo (focal object). Skipped when the SCENE owns the object: a
+          `--scene` generation bakes the tile into bgImage, so drawing this one too would put the
+          same logo on the frame twice, in two different places. */}
+      {objectInScene ? null : (
+        <div style={{ position: 'absolute', left: `${cfg.cx * 100}%`, top: `${cfg.cy * 100}%`, transform: 'translate(-50%, -50%)' }}>
+          <LogoTile logo={logo} size={logoW} glow={glow} accent={acc} rotate={-4} />
+        </div>
+      )}
 
       {/* text (3) — repo header, top-left */}
       <div style={{ position: 'absolute', left: PAD, top: PAD, display: 'flex', alignItems: 'center', gap: 16 }}>

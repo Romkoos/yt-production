@@ -87,6 +87,15 @@ export const thumbSchema = z.object({
   glowColor: zColor().optional(),
   // Layer 1 — optional background texture (a public/ path)
   bgImage: z.string().optional(),
+  // The scene OWNS the object: suppress the template's own LogoTile entirely.
+  //
+  // A `/gen-thumb-object --scene` render bakes the logo tile into the background. The template
+  // draws its LogoTile unconditionally, so pairing a generated scene with the default (false)
+  // renders the logo TWICE, at two different positions. Set true whenever bgImage is a generated
+  // scene; /thumbs-preview warns when the combination is inconsistent, because this is otherwise a
+  // manual switch that is easy to forget — the render succeeds either way, it just ships a
+  // doubled logo. Non-scene backgrounds keep the template tile: there, it IS the object.
+  objectInScene: z.boolean().optional(),
   // OPTIONAL faint one-line terminal decoration
   texture: z.object({ text: z.string(), tone: termToneSchema.optional() }).optional(),
   branding: brandingSchema.optional(),

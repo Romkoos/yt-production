@@ -321,12 +321,21 @@ async function main(): Promise<void> {
   for (const file of outputs) {
     process.stdout.write(`  ✓ ${file}   (${costText})\n`)
     if (args.variant === 'scene') {
+      // Both lines, together, are the paste-ready snippet. A scene BAKES the logo tile into the
+      // background, and ThumbTemplate draws its own LogoTile unless objectInScene is set — so
+      // pasting the bgImage line alone renders the logo twice, in two places. Printing the pair is
+      // what keeps that from being a switch the host has to remember (/thumbs-preview also warns).
       process.stdout.write(`    bgImage: "gen/${episode}/${file}"\n`)
+      process.stdout.write(`    objectInScene: true\n`)
     }
   }
   process.stdout.write(`\nArchive: ${genDir}\nLogged:  ${logPath}\n`)
   if (args.variant === 'scene') {
-    process.stdout.write(`Paste the bgImage line into episodes/${episode}/assets/thumb-variants.json, then run /thumbs-preview.\n`)
+    process.stdout.write(
+      `Paste BOTH lines into each variant's props in episodes/${episode}/assets/thumb-variants.json, then run\n` +
+        `/thumbs-preview. objectInScene hands the object to the scene — without it the template draws its own\n` +
+        `logo tile on top of the one baked into the scene.\n`,
+    )
   }
 }
 

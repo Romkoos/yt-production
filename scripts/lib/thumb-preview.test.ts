@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hookText, variantSummary, loadVariants, pickEpisode, buildIndexHtml, blockWidthWarnings, type SheetItem } from './thumb-preview'
+import { hookText, variantSummary, loadVariants, pickEpisode, buildIndexHtml, blockWidthWarnings, sceneObjectWarnings, type SheetItem } from './thumb-preview'
 
 describe('hookText', () => {
   it('joins array hook lines with a space', () => {
@@ -148,5 +148,43 @@ describe('blockWidthWarnings — the host must be told when a variant is clamped
     // 708 + 60 === 768 === 1280 * 0.60 exactly — the last legal width, not a warning.
     expect(blockWidthWarnings([v('edge', { blockWidth: 708 })])).toEqual([])
     expect(blockWidthWarnings([v('over', { blockWidth: 709 })])).toHaveLength(1)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The double-object guard.
+//
+// A `--scene` generation BAKES the logo tile into the background. ThumbTemplate also draws its own
+// LogoTile, unconditionally — so a generated scene under an unchanged template renders the logo
+// TWICE, at two different positions. `objectInScene: true` suppresses the template's tile and hands
+// the object to the scene. This check exists because that prop is otherwise a manual switch someone
+// forgets: the render still succeeds, it just quietly ships a doubled logo.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('sceneObjectWarnings — a generated scene plus the template tile is a doubled logo', () => {
+  const v = (label: string, props: Record<string, unknown>) => ({ label, props })
+  const SCENE = 'gen/2026-07-ep001/scene-real-avatar-v1.png'
+
+  it('flags a generated scene left with the template LogoTile still on', () => {
+    const [w] = sceneObjectWarnings([v('A — clean right', { bgImage: SCENE })])
+    expect(w).toMatch(/A — clean right/)
+    expect(w).toMatch(/double object/i)
+    expect(w).toMatch(/objectInScene/)
+  })
+
+  it('flags it just as loudly when objectInScene is explicitly false', () => {
+    expect(sceneObjectWarnings([v('B', { bgImage: SCENE, objectInScene: false })])).toHaveLength(1)
+  })
+
+  it('says nothing once the scene owns the object', () => {
+    expect(sceneObjectWarnings([v('A', { bgImage: SCENE, objectInScene: true })])).toEqual([])
+  })
+
+  it('ignores a variant with no background at all — the template tile IS the object there', () => {
+    expect(sceneObjectWarnings([v('A', { hook: [] })])).toEqual([])
+  })
+
+  it('does not flag a hand-made background outside gen/ — only generated scenes bake in an object', () => {
+    expect(sceneObjectWarnings([v('A', { bgImage: 'thumb/texture-hand-made.png' })])).toEqual([])
   })
 })
