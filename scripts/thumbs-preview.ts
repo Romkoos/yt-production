@@ -17,7 +17,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { openInBrowser, downscalePng } from './lib/platform'
-import { loadVariants, variantSummary, buildIndexHtml, pickEpisode, type SheetItem } from './lib/thumb-preview'
+import { loadVariants, variantSummary, buildIndexHtml, pickEpisode, blockWidthWarnings, sceneObjectWarnings, type SheetItem } from './lib/thumb-preview'
 
 const REMOTION_DIR = resolve('remotion')
 const THUMB_COMPOSITION = 'ThumbTemplate'
@@ -59,6 +59,22 @@ function main(): void {
     throw new Error(`no ${variantsPath} — create it (an array of { label, props }) before previewing ${episode}`)
   }
   const variants = loadVariants(JSON.parse(readFileSync(variantsPath, 'utf8')))
+
+  // Say it BEFORE the renders, not after: the sheet is what the host looks at, and a clamped block
+  // renders perfectly happily — just not at the width they typed. Remotion eats the component's own
+  // console.warn on the `still` path, so this is the only place the message can actually land.
+  //
+  // TODO(cli-warnings): ThumbTemplate ALSO warns when the in-brick verdict badge has to shrink to
+  // clear the channel lockup (fitVerdictInBrick), and that warning cannot be reproduced here: it
+  // depends on the brick's measured glyph widths, and Node has no canvas. Surfacing it means moving
+  // this script off the `npx remotion still` CLI and onto @remotion/renderer's renderStill(), which
+  // takes an onBrowserLog callback and would forward the component's console.warn to this terminal.
+  // DEFERRED ON PURPOSE: the shrink has never fired — the tightest ep001 variant clears the lockup
+  // by +131px — and building the plumbing for a warning nobody has needed yet is speculative. Do it
+  // the first time a real render actually shrinks a badge.
+  for (const w of [...blockWidthWarnings(variants), ...sceneObjectWarnings(variants)]) {
+    process.stdout.write(`  ! ${w}\n`)
+  }
 
   const previewDir = join(assetsDir, 'preview')
   const indexPath = join(previewDir, 'index.html')

@@ -28,27 +28,36 @@ export const THUMB_ASTRYX_A: ThumbTemplateProps = {
   glowColor: META_BLUE,
   repoName: REPO,
   verdict: 'ГОДНОТА',
-  verdictPosition: 'top-right',
+  verdictPosition: 'in-brick',
   logo: LOGO,
+  hookBlock: true,
+  hookFont: 'unbounded',
   hook: [
     { text: 'Дизайн-система', size: 'md', weight: 700 },
     { text: 'Meta', size: 'xl', accent: true },
   ],
 }
 
-// B — hero: larger logo centre-right, brand-yellow accent, faint terminal texture.
+// B — hero: larger logo centre-right, brand-yellow accent.
+// The hook breaks «UI для тебя» / «и AI» so the two lines have similar natural widths (~1.6x apart)
+// and the brick can actually equalize them. The earlier break — «UI для тебя и» / «AI» — could not:
+// a 2-character line needs ~7x to reach a 13-character line's width, i.e. a ~400px word in a 720px
+// frame, so the ratio cap held it short and the block never read as a brick.
+// The terminal texture is gone: it earned its keep on the dead programmatic gradient, but the
+// generated scene supplies the life now, and the in-brick badge grew down over it.
 export const THUMB_ASTRYX_B: ThumbTemplateProps = {
   layout: 'logo-hero',
   accent: '#facc15',
   glowColor: META_BLUE,
   repoName: REPO,
   verdict: 'ГОДНОТА',
-  verdictPosition: 'top-right',
+  verdictPosition: 'in-brick',
   logo: LOGO,
-  texture: { text: '$ pnpm install --ignore-scripts', tone: 'dim' },
+  hookBlock: true,
+  hookFont: 'unbounded',
   hook: [
-    { text: 'UI для тебя и', size: 'md', weight: 700 },
-    { text: 'AI', size: 'xl', accent: true },
+    { text: 'UI для тебя', size: 'md', weight: 700 },
+    { text: 'и AI', size: 'xl', accent: true },
   ],
 }
 
@@ -59,9 +68,11 @@ export const THUMB_ASTRYX_C: ThumbTemplateProps = {
   glowColor: META_BLUE,
   repoName: REPO,
   verdict: 'ГОДНОТА',
-  verdictPosition: 'top-right',
+  verdictPosition: 'in-brick',
   logo: LOGO,
   logoScale: 0.82, // trims the focal tile so the long «переходить?» hero word clears it
+  hookBlock: true,
+  hookFont: 'unbounded',
   hook: [
     { text: 'Стоит', size: 'md', weight: 700 },
     { text: 'переходить?', size: 'lg', accent: true },

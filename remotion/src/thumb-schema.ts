@@ -46,6 +46,8 @@ export const brandingSchema = z.object({
   logoSrc: z.string().optional(),
 })
 
+export const hookFontSchema = z.enum(['unbounded', 'oswald', 'montserrat'])
+
 export const thumbSchema = z.object({
   // text element (3) — small header
   repoName: z.string(),
@@ -53,17 +55,55 @@ export const thumbSchema = z.object({
   verdict: z.enum(VERDICT_VALUES),
   // text element (1) — the huge hook, one or more styled lines
   hook: z.array(hookLineSchema),
+
+  // ── the hook BRICK (block mode) ────────────────────────────────────────────
+  // On (the default), the hook renders as a justified block: every line is scaled so its
+  // rendered width equals blockWidth, which makes short lines big and long lines small —
+  // the poster lockup. The lines stay exactly as given (the host keeps break control via
+  // HookLine[]); only their SIZES are computed, so `hook[].size` is ignored here. `accent`,
+  // stroke and shadow carry over unchanged. Set false to fall back to the per-line `size` enum.
+  hookBlock: z.boolean().optional(),
+  // Block width in px. The right edge is HARD-CLAMPED so blockWidth + padding never crosses 60%
+  // of the frame (the scene reserves everything past it for the object) — a value that would is
+  // shrunk, with a console warning. Default 563 ≈ 44% of the 1280px frame.
+  blockWidth: z.number().min(200).max(900).optional(),
+  // Cap on largest-line-size ÷ smallest-line-size. Uncapped, a one-word line next to a long one
+  // grows until it eats the frame.
+  maxLineScaleRatio: z.number().min(1).max(4).optional(),
+  // Uppercase the hook (with slightly tightened tracking) — the brick reads as a solid mass.
+  hookUppercase: z.boolean().optional(),
+  // The hook's face. Unbounded (wide, geometric, Black 900) is the brick default; Oswald is the
+  // condensed alternative; montserrat matches the rest of the frame.
+  hookFont: hookFontSchema.optional(),
+
   // Layer 2 — the focal object
   logo: thumbLogoSchema,
   // layout controls logo size + centre + hook vertical
   layout: z.enum(['logo-right', 'logo-hero', 'logo-spot']).optional(),
-  verdictPosition: z.enum(['top-right', 'mid-left', 'top-left']).optional(),
+  // 'in-brick' renders the verdict as the block's LAST ROW: a flat badge spanning the block width,
+  // so the lockup closes on a hard horizontal edge. Flat by design — the 3D bevelled-and-tilted
+  // sticker reads as a foreign object inside a flat typographic block. It inherits the block's 60%
+  // clamp (it spans the block), is capped at 0.7× the largest hook line so it cannot out-shout the
+  // hook, and shrinks itself if a tall brick would drop it onto the channel lockup.
+  // The three absolute positions keep the dimensional sticker, for non-brick layouts.
+  verdictPosition: z.enum(['in-brick', 'top-right', 'mid-left', 'top-left']).optional(),
+  // Gap between the brick's last hook line and an in-brick verdict badge.
+  verdictGap: z.number().min(0).max(120).optional(),
   // NEW — multiply the layout's logo width (0.4–2×); tune the focal size live
   logoScale: z.number().min(0.4).max(2).optional(),
   accent: zColor().optional(),
   glowColor: zColor().optional(),
   // Layer 1 — optional background texture (a public/ path)
   bgImage: z.string().optional(),
+  // The scene OWNS the object: suppress the template's own LogoTile entirely.
+  //
+  // A `/gen-thumb-object --scene` render bakes the logo tile into the background. The template
+  // draws its LogoTile unconditionally, so pairing a generated scene with the default (false)
+  // renders the logo TWICE, at two different positions. Set true whenever bgImage is a generated
+  // scene; /thumbs-preview warns when the combination is inconsistent, because this is otherwise a
+  // manual switch that is easy to forget — the render succeeds either way, it just ships a
+  // doubled logo. Non-scene backgrounds keep the template tile: there, it IS the object.
+  objectInScene: z.boolean().optional(),
   // OPTIONAL faint one-line terminal decoration
   texture: z.object({ text: z.string(), tone: termToneSchema.optional() }).optional(),
   branding: brandingSchema.optional(),
@@ -75,3 +115,4 @@ export type ThumbLogo = z.infer<typeof thumbLogoSchema>
 export type ThumbLayout = NonNullable<ThumbTemplateProps['layout']>
 export type VerdictPosition = NonNullable<ThumbTemplateProps['verdictPosition']>
 export type TermTone = z.infer<typeof termToneSchema>
+export type HookFont = z.infer<typeof hookFontSchema>
