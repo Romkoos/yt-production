@@ -18,10 +18,15 @@ export type GenVariant = 'object' | 'scene'
 // "soft" and "gentle" read to the model as "unlit": the first billed scene came back a grey matte
 // slab. The tile is the focal object of the entire thumbnail — recognition on mobile happens through
 // it — so it has to EMIT. Say bright, say luminous, and say it in those words.
+// A grounded contact shadow implies a floor the thumbnail does not have: composited under the hook
+// block it reads as a second, dimmer object. Dropping the clause is not enough — an unlit "floating"
+// tile gets a shadow by default — so the absence is stated as a rule.
 const TILE_PRESENTATION =
   'Present the subject as a single 3D app-icon tile: a BRIGHT glowing white tile with a strong emissive ' +
-  'rim light, vivid and luminous against the dark scene — rounded-square, with real depth and a grounded ' +
-  'contact shadow, floating and very slightly rotated.'
+  'rim light, vivid and luminous against the dark scene — rounded-square, with real depth, floating ' +
+  'free in empty space and very slightly rotated. ' +
+  'The tile casts NO shadow: there is no ground plane, no surface, no floor and no drop shadow or ' +
+  'cast shadow anywhere in the frame. It floats, lit only by its own glow.'
 
 const ISOLATED_ON_BLACK =
   'The tile is isolated on a pure black (#000000) background. Nothing else is in the frame.'

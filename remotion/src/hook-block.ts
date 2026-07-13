@@ -22,6 +22,62 @@ export const REF_SIZE = 100
  *  scene prompt re-opens the text/object collision this whole pass exists to close. */
 export const TEXT_ZONE_FRACTION = 0.6
 
+// ── Accent runs inside a line ─────────────────────────────────────────────────
+//
+// `accent` on a HookLine paints the WHOLE line. Wrapping part of a line in `*…*` paints just that
+// part, so one line can carry both temperatures: «*7 440* звёзд» — the number hot, the noun cool.
+//
+// The markers are metadata, never glyphs. They are stripped here, once, and `runText()` is the only
+// string that leaves this module: what gets MEASURED is the concatenation of the runs, character for
+// character, so the justification math (which sizes each line so its rendered width equals
+// blockWidth) sees exactly the string the browser paints. Splitting a run into two <span>s cannot
+// change that width — same face, same size, same tracking — so the sizing stays exact.
+//
+// A literal asterisk escapes as `\*`. An unclosed `*` simply accents to end of line.
+
+export interface HookRun {
+  text: string
+  accent: boolean
+}
+
+/** Split a hook line into accent runs. Marker-free text yields a single, unaccented run. */
+export function parseAccentRuns(text: string): HookRun[] {
+  const runs: HookRun[] = []
+  let buf = ''
+  let accent = false
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (ch === '\\' && text[i + 1] === '*') {
+      buf += '*'
+      i++
+      continue
+    }
+    if (ch === '*') {
+      if (buf) runs.push({ text: buf, accent })
+      buf = ''
+      accent = !accent
+      continue
+    }
+    buf += ch
+  }
+  if (buf) runs.push({ text: buf, accent })
+  return runs
+}
+
+/** The runs of one line, with the case transform applied — the form that is DRAWN.
+ *  Uppercasing must happen here, not via CSS `text-transform`: the transform changes the rendered
+ *  width without changing the string `measureText` sees, and every line would justify to the wrong
+ *  size. So it happens once, and both the measurement and the paint come from this result. */
+export function lineRuns(text: string, uppercase: boolean): HookRun[] {
+  const runs = parseAccentRuns(text)
+  return uppercase ? runs.map((r) => ({ ...r, text: r.text.toUpperCase() })) : runs
+}
+
+/** The plain string a set of runs paints — this, and only this, is what gets measured. */
+export function runText(runs: HookRun[]): string {
+  return runs.map((r) => r.text).join('')
+}
+
 export interface BlockCaps {
   /** Cap on largest-line-size ÷ smallest-line-size. Uncapped, a one-word line next to a long
    *  one blows up to a size that eats the frame; 2 is the sane poster default. */

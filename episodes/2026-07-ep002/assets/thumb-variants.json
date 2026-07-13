@@ -1,0 +1,111 @@
+[
+  {
+    "label": "A — приватность (ПОЧТИ)",
+    "props": {
+      "layout": "logo-right",
+      "accent": "#a78bfa",
+      "glowColor": "#7c3aed",
+      "repoName": "Zackriya-Solutions/meetily",
+      "verdict": "ХАЙП",
+      "verdictPosition": "in-brick",
+      "logo": {
+        "src": "thumb/logo-meetily.png",
+        "glyph": ">_"
+      },
+      "hookBlock": true,
+      "hookFont": "unbounded",
+      "hookUppercase": true,
+      "hook": [
+        {
+          "text": "100% локально",
+          "size": "md",
+          "weight": 700
+        },
+        {
+          "text": "почти",
+          "size": "xl",
+          "accent": true
+        }
+      ],
+      "maxLineScaleRatio": 3,
+      "bgImage": "gen/2026-07-ep002/scene-real-avatar-v1.png",
+      "objectInScene": true
+    }
+  },
+  {
+    "label": "B — звёзды без коммитов",
+    "props": {
+      "layout": "logo-right",
+      "accent": "#a78bfa",
+      "glowColor": "#7c3aed",
+      "repoName": "Zackriya-Solutions/meetily",
+      "verdict": "ХАЙП",
+      "verdictPosition": "in-brick",
+      "logo": {
+        "src": "thumb/logo-meetily.png",
+        "glyph": ">_"
+      },
+      "hookBlock": true,
+      "hookFont": "unbounded",
+      "hookUppercase": true,
+      "hook": [
+        {
+          "text": "*7 440* звёзд",
+          "size": "md",
+          "weight": 700
+        },
+        {
+          "text": "за неделю",
+          "size": "md",
+          "weight": 700
+        },
+        {
+          "text": "*0* коммитов",
+          "size": "xl",
+          "weight": 700
+        }
+      ],
+      "maxLineScaleRatio": 3,
+      "bgImage": "gen/2026-07-ep002/scene-real-avatar-v1.png",
+      "objectInScene": true
+    }
+  },
+  {
+    "label": "C — обещали приватность / PostHog",
+    "props": {
+      "layout": "logo-right",
+      "accent": "#a78bfa",
+      "glowColor": "#7c3aed",
+      "repoName": "Zackriya-Solutions/meetily",
+      "verdict": "ХАЙП",
+      "verdictPosition": "in-brick",
+      "logo": {
+        "src": "thumb/logo-meetily.png",
+        "glyph": ">_"
+      },
+      "hookBlock": true,
+      "hookFont": "unbounded",
+      "hookUppercase": true,
+      "hook": [
+        {
+          "text": "обещали",
+          "size": "md",
+          "weight": 700
+        },
+        {
+          "text": "приватность",
+          "size": "md",
+          "weight": 700
+        },
+        {
+          "text": "PostHog",
+          "size": "xl",
+          "accent": true
+        }
+      ],
+      "maxLineScaleRatio": 3,
+      "bgImage": "gen/2026-07-ep002/scene-real-avatar-v1.png",
+      "objectInScene": true
+    }
+  }
+]

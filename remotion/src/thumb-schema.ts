@@ -24,9 +24,14 @@ const _verdictsInSync: readonly (typeof VERDICT_VALUES)[number][] = VERDICTS
 void _verdictsInSync
 
 export const hookLineSchema = z.object({
+  // Wrap part of the line in `*…*` to accent just that part: "*7 440* звёзд" paints the number in the
+  // accent colour and the noun in white. The markers are stripped before the line is measured or
+  // drawn (hook-block.ts, parseAccentRuns) — they never render. Escape a literal asterisk as `\*`.
   text: z.string(),
   size: z.enum(['xl', 'lg', 'md']),
   weight: z.union([z.literal(400), z.literal(700)]).optional(),
+  // Accents the WHOLE line. Orthogonal to `*…*`, which accents part of one: the line-level colour is
+  // the default each run starts from, and a marked run overrides it.
   accent: z.boolean().optional(),
 })
 
@@ -72,6 +77,11 @@ export const thumbSchema = z.object({
   maxLineScaleRatio: z.number().min(1).max(4).optional(),
   // Uppercase the hook (with slightly tightened tracking) — the brick reads as a solid mass.
   hookUppercase: z.boolean().optional(),
+  // Leading for the brick's lines. The 0.95 "lines touch" default was tuned on two-line hooks; three
+  // and four lines need air or the block stops reading as words. Drives BOTH the drawn line box and
+  // the measured brick height (the in-brick badge and the clamp depend on that height), so it is one
+  // value, not two.
+  hookLineHeight: z.number().min(0.8).max(1.6).optional(),
   // The hook's face. Unbounded (wide, geometric, Black 900) is the brick default; Oswald is the
   // condensed alternative; montserrat matches the rest of the frame.
   hookFont: hookFontSchema.optional(),
