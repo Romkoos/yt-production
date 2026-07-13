@@ -4,6 +4,7 @@ import {
   type GenMode,
   type GenVariant,
   extractInlineImages,
+  modeUsesSubject,
   nextVersion,
   estimateCostUsd,
   appendGenLog,
@@ -87,6 +88,21 @@ describe('buildPrompt — honesty guardrails per mode', () => {
   it('refuses to build a text-only prompt with no subject', () => {
     expect(() => buildPrompt('known-logo', 'object')).toThrow(/--subject/)
     expect(() => buildPrompt('category-object', 'scene')).toThrow(/--subject/)
+  })
+})
+
+describe('modeUsesSubject — the audit log must not record an input the prompt ignored', () => {
+  it('real-avatar does not use it: its subject is the attached avatar', () => {
+    expect(modeUsesSubject('real-avatar')).toBe(false)
+    // The proof: the prompt is byte-identical with and without a subject.
+    expect(buildPrompt('real-avatar', 'object', 'a subject that goes nowhere')).toBe(
+      buildPrompt('real-avatar', 'object'),
+    )
+  })
+
+  it('the text-only modes do use it — it is the whole subject of the prompt', () => {
+    expect(modeUsesSubject('known-logo')).toBe(true)
+    expect(modeUsesSubject('category-object')).toBe(true)
   })
 })
 

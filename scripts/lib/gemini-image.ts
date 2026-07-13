@@ -48,6 +48,15 @@ function requireSubject(mode: GenMode, subject?: string): string {
   return subject.trim()
 }
 
+/** Does this mode's prompt actually consume `subject`?
+ *
+ *  real-avatar's subject IS the attached avatar, so buildPrompt ignores any `--subject` passed
+ *  alongside it. The audit log asks this before recording `subject`: a record that lists an input
+ *  which never reached the prompt is a lie about how the image was produced. */
+export function modeUsesSubject(mode: GenMode): boolean {
+  return mode !== 'real-avatar'
+}
+
 /** Build the generation prompt. `subject` is required for known-logo / category-object and
  *  ignored for real-avatar, whose subject is the attached avatar itself. */
 export function buildPrompt(mode: GenMode, variant: GenVariant, subject?: string): string {
