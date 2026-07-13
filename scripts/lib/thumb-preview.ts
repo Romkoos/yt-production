@@ -18,6 +18,7 @@ export interface SheetItem {
   thumbMtime: number
   hookText: string
   verdict: string
+  bgImage: string // the variant's background (a public/ path), '' when it has none
 }
 
 /** Flatten a `hook` prop (array of styled lines, or a plain string) to its text. */
@@ -32,9 +33,15 @@ export function hookText(hook: unknown): string {
   return ''
 }
 
-/** The caption printed under each variant: its hook text and verdict. */
-export function variantSummary(props: Record<string, unknown>): { hookText: string; verdict: string } {
-  return { hookText: hookText(props.hook), verdict: String(props.verdict ?? '') }
+/** The caption printed under each variant: its hook text, verdict, and background. The background
+ *  matters once generated scenes (/gen-thumb-object) start feeding bgImage — without it the host
+ *  cannot tell which variant is sitting on which scene. */
+export function variantSummary(props: Record<string, unknown>): { hookText: string; verdict: string; bgImage: string } {
+  return {
+    hookText: hookText(props.hook),
+    verdict: String(props.verdict ?? ''),
+    bgImage: typeof props.bgImage === 'string' ? props.bgImage : '',
+  }
 }
 
 /** Parse + shape-validate a thumb-variants.json payload. Authoritative prop validation happens
@@ -93,7 +100,7 @@ export function buildIndexHtml(items: SheetItem[], opts: { episode?: string } = 
           <figcaption>120px · light (search / SERP)</figcaption>
         </figure>
       </div>
-      <p class="props"><span class="k">hook</span> «${esc(it.hookText)}» &nbsp;·&nbsp; <span class="k">verdict</span> ${esc(it.verdict)}</p>
+      <p class="props"><span class="k">hook</span> «${esc(it.hookText)}» &nbsp;·&nbsp; <span class="k">verdict</span> ${esc(it.verdict)} &nbsp;·&nbsp; <span class="k">bg</span> ${it.bgImage ? esc(it.bgImage) : '—'}</p>
     </section>`,
     )
     .join('\n')

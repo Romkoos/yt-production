@@ -86,7 +86,8 @@ function main(): void {
     downscalePng(fullPath, thumbPath, 120)
 
     const summary = variantSummary(variant.props)
-    process.stdout.write(`  ✓ ${fullFile}  ${variant.label}  «${summary.hookText}» → ${summary.verdict}\n`)
+    const bg = summary.bgImage || '—'
+    process.stdout.write(`  ✓ ${fullFile}  ${variant.label}  «${summary.hookText}» → ${summary.verdict}  bg: ${bg}\n`)
     return {
       label: variant.label,
       fullFile,
@@ -95,6 +96,7 @@ function main(): void {
       thumbMtime: mtimeMs(thumbPath),
       hookText: summary.hookText,
       verdict: summary.verdict,
+      bgImage: summary.bgImage,
     }
   })
 
