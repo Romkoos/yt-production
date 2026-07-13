@@ -8,6 +8,10 @@ episodes/*/shorts/*
 !episodes/*/assets/*.md
 # thumb-variants.json is the editable render source for /thumbs-preview — track it (preview/ renders stay ignored)
 !episodes/*/assets/thumb-variants.json
+# gen-log.json is the generative-asset audit/repro record (prompt, model, mode, cost per run) —
+# tracked, append-only. It lives BESIDE assets/gen/ and not inside it because an excluded parent
+# directory can never be re-included through (see scripts/workspace-hygiene.test.ts).
+!episodes/*/assets/gen-log.json
 
 # local db
 db/tracker.sqlite
@@ -24,3 +28,7 @@ dist/
 # editors
 .idea/
 .vscode/
+
+# per-episode generated render surface — mirrored from the episode archive, disposable.
+# It must not pollute the tracked brand-asset space (branding/, fonts/, thumb/).
+remotion/public/gen/
