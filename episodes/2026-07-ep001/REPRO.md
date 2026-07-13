@@ -7,7 +7,9 @@
      семантические инструкции для съёмки, без таймкодов. -->
 
 **Repo:** https://github.com/facebook/astryx  ·  **Вердикт:** ГОДНОТА  ·  **Sandbox:** `episodes/2026-07-ep001/sandbox/astryx`
-**Recording time budget:** ≈ 35 мин активной записи (один прогон `pnpm test` ~70 с переиспользуется для сцен 8 и 9).
+**Recording time budget:** ≈ 35 мин активной записи. Длинные ожидания — два теста по ~70 с: зелёный
+`pnpm test` (сцена 8, его кадр переиспользуется в сцене 9) и красный `pnpm -F @astryxdesign/core test`
+(сцена 9, 28 падений). Всё остальное — секунды.
 
 ---
 
@@ -53,9 +55,10 @@ pnpm install --ignore-scripts
 node packages/cli/bin/astryx.mjs help
 
 # 3. сборка публикуемых пакетов ЧЕРЕЗ pnpm (иначе node_modules/.bin не в PATH — см. Failure recipes)
-#    build — ~несколько с, success: dist/vite.mjs + .d.ts
+#    build — ~1 с (с нуля — пара секунд), success: "Built dist/vite.d.ts" (+ dist/vite.mjs)
 pnpm -F @astryxdesign/build build
-#    core — ~десятки с, success: Babel 477 файлов, StyleX 5445 правил → dist/astryx.css (~118 КБ) + UMD
+#    core — ~11 с, success: "Successfully compiled 477 files with Babel", "Collected 5445 StyleX rules",
+#    "astryx.css: 118.1 KB" (+ UMD-бандл)
 pnpm -F @astryxdesign/core build
 ```
 
@@ -121,7 +124,7 @@ pnpm -F @astryxdesign/core build
   в корень: `cd ../..`). Затем успех — `pnpm -F @astryxdesign/build build`.
 - **On screen:** сперва `/bin/sh: tsc: command not found` и `Error: Command failed: tsc --project
   tsconfig.build.json` (status 127); затем чистая сборка → `dist/vite.mjs` + `.d.ts`.
-- **Wait/Cut:** провал мгновенный; успешная сборка — несколько секунд. (Подробности — Failure recipes.)
+- **Wait/Cut:** провал мгновенный; успешная сборка `build` — ~1 с. (Подробности — Failure recipes.)
 - **Reset:** детерминировано, повторяемо; чтобы пере-собрать начисто — `rm -rf packages/build/dist`.
 
 <a id="scene-8"></a>
@@ -138,9 +141,12 @@ pnpm -F @astryxdesign/core build
 ### SCENE 9 — «README врёт» по-техничке: cwd ломает тесты  ·  _beat: Где README врёт_
 - **Do:** красная половина — `pnpm -F @astryxdesign/core test` (28 падений). Зелёная половина —
   `pnpm test` из корня (переиспользуй кадр из сцены 8).
-- **On screen:** рядом две команды — слева 28 падений с `ENOENT: no such file or directory, scandir
-  'packages/core/src'`; справа полностью зелёные 6140.
-- **Wait/Cut:** прогон core-тестов короче полного; полную «зелёнку» не запускай повторно — бери из сцены 8.
+- **On screen:** рядом две команды — слева «Test Files 6 failed | 323 passed (329) / Tests 28 failed |
+  6112 passed (6140)» с `ENOENT: no such file or directory, scandir 'packages/core/src'`; справа
+  полностью зелёные 6140 (из сцены 8).
+- **Wait/Cut:** `pnpm -F @astryxdesign/core test` идёт **~70 с** и прогоняет ВЕСЬ набор (329 файлов /
+  6140 тестов), просто 28 из них красные — это НЕ подвисание, дай отработать. Зелёную половину не
+  запускай повторно — бери кадр из сцены 8 (экономит ещё ~70 с).
 - **Reset:** — (детерминировано; см. Failure recipes).
 
 <a id="scene-10"></a>
@@ -170,7 +176,8 @@ pnpm -F @astryxdesign/core build
   `Error: Command failed: tsc --project tsconfig.build.json` (status 127). **Детерминировано.**
   Правильная команда: `pnpm -F @astryxdesign/build build`.
 - **28 падений `ENOENT ... packages/core/src`** (сцена 9) — триггер: `pnpm -F @astryxdesign/core test`
-  → 28 из 6140 падают с `ENOENT: no such file or directory, scandir 'packages/core/src'` (из
+  (~70 с — прогоняет весь набор 329/6140) → 28 из 6140 падают с `ENOENT: no such file or directory,
+  scandir 'packages/core/src'` (из
   `packages/cli/src/lib/component-discovery.mjs`: pnpm ставит cwd в `packages/core`, а CLI-тесты
   читают путь `packages/core/src` относительно cwd). **Детерминировано.** Правильная команда:
   `pnpm test` из корня → все 6140 зелёные.
