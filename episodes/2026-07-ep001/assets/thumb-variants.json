@@ -7,7 +7,7 @@
       "glowColor": "#1877f2",
       "repoName": "facebook/astryx",
       "verdict": "ГОДНОТА",
-      "verdictPosition": "top-right",
+      "verdictPosition": "below-hook",
       "logo": { "src": "thumb/logo-facebook.png", "glyph": ">_" },
       "hookBlock": true,
       "hookFont": "unbounded",
@@ -15,7 +15,7 @@
         { "text": "Дизайн-система", "size": "md", "weight": 700 },
         { "text": "Meta", "size": "xl", "accent": true }
       ],
-      "bgImage": "gen/2026-07-ep001/scene-real-avatar-v1.png",
+      "bgImage": "gen/2026-07-ep001/scene-real-avatar-v2.png",
       "objectInScene": true
     }
   },
@@ -27,7 +27,7 @@
       "glowColor": "#1877f2",
       "repoName": "facebook/astryx",
       "verdict": "ГОДНОТА",
-      "verdictPosition": "top-right",
+      "verdictPosition": "below-hook",
       "logo": { "src": "thumb/logo-facebook.png", "glyph": ">_" },
       "texture": { "text": "$ pnpm install --ignore-scripts", "tone": "dim" },
       "hookBlock": true,
@@ -36,7 +36,7 @@
         { "text": "UI для тебя и", "size": "md", "weight": 700 },
         { "text": "AI", "size": "xl", "accent": true }
       ],
-      "bgImage": "gen/2026-07-ep001/scene-real-avatar-v1.png",
+      "bgImage": "gen/2026-07-ep001/scene-real-avatar-v2.png",
       "objectInScene": true
     }
   },
@@ -48,7 +48,7 @@
       "glowColor": "#1877f2",
       "repoName": "facebook/astryx",
       "verdict": "ГОДНОТА",
-      "verdictPosition": "top-right",
+      "verdictPosition": "below-hook",
       "logo": { "src": "thumb/logo-facebook.png", "glyph": ">_" },
       "logoScale": 0.82,
       "hookBlock": true,
@@ -57,7 +57,7 @@
         { "text": "Стоит", "size": "md", "weight": 700 },
         { "text": "переходить?", "size": "lg", "accent": true }
       ],
-      "bgImage": "gen/2026-07-ep001/scene-real-avatar-v1.png",
+      "bgImage": "gen/2026-07-ep001/scene-real-avatar-v2.png",
       "objectInScene": true
     }
   }

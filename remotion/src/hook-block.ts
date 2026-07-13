@@ -57,6 +57,100 @@ export function fitLinesToBlock(measuredWidths: number[], blockWidth: number, ca
   return measuredWidths.map((w) => (w > 0 ? Math.min((blockWidth / w) * REF_SIZE, ceiling) : smallest))
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// The verdict sticker, anchored below the brick (verdictPosition: 'below-hook').
+//
+// The sticker hangs off the bottom of the hook column, so its position is a FUNCTION of the brick's
+// height — which is itself a function of the measured line sizes. Two things it must not do: cross
+// the 60% line into the object's zone, and land on the channel lockup in the bottom-left. A tall
+// brick makes the second one certain, so the sticker gets one scale factor satisfying both.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** The sticker's metrics at scale 1 — must match VerdictSticker's CSS. */
+const STICKER_FONT = 78
+const STICKER_LINE_BOX = STICKER_FONT * 1.2 // the text's line box
+const STICKER_PAD_Y = 14 + 18 // padding: '14px 42px 18px'
+const STICKER_PAD_X = 42 * 2
+const STICKER_BORDER = 3 * 2
+
+/** Below the lockup's top edge the sticker must not go. The channel mark sits at bottom:36 and is
+ *  52px tall, so it starts at 720-36-52 = 632; back off a little for its glow. */
+export const LOCKUP_TOP = 620
+
+/** Shrinking is a fix only up to a point. A verdict nobody can read at 120px is not a verdict. */
+export const MIN_STICKER_SCALE = 0.62
+
+/** The sticker's rendered height at a given scale. */
+export function stickerHeight(scale: number): number {
+  return scale * (STICKER_LINE_BOX + STICKER_PAD_Y + STICKER_BORDER)
+}
+
+/** The sticker's rendered width at a given scale, for a verdict measured at REF_SIZE. */
+export function stickerWidth(scale: number, verdictWidthAtRef: number): number {
+  return scale * ((verdictWidthAtRef * STICKER_FONT) / REF_SIZE + STICKER_PAD_X + STICKER_BORDER)
+}
+
+export interface VerdictFit {
+  scale: number
+  warning?: string
+}
+
+export interface VerdictBelowHookParams {
+  /** Total height of the rendered hook lines. */
+  brickHeight: number
+  /** The hook column's `top`, resolved to px. */
+  hookTop: number
+  /** Whether the column is vertically centred on hookTop (translateY(-50%)). */
+  translateY: boolean
+  /** The block the sticker is left-aligned to — already clamped inside the 60% line, so fitting the
+   *  sticker within it is what makes the sticker respect that same boundary. */
+  blockWidth: number
+  /** Fixed gap between the brick's last line and the sticker. */
+  gap: number
+  /** Width of the verdict word measured at REF_SIZE in the sticker's face. */
+  verdictWidthAtRef: number
+  lockupTop?: number
+}
+
+/** The scale at which the below-hook sticker clears both the lockup and the block's right edge.
+ *
+ *  Returns 1 (no warning) when it already fits. Otherwise shrinks to the binding constraint and
+ *  names it — a sticker that silently shrank is a sticker whose size no longer means anything, and
+ *  the host tunes these props expecting the verdict to be a fixed, recognisable stamp. */
+export function fitVerdictBelowHook(p: VerdictBelowHookParams): VerdictFit {
+  const lockupTop = p.lockupTop ?? LOCKUP_TOP
+
+  // How much vertical room the sticker has. With translateY the whole column (brick + gap + sticker)
+  // is centred on hookTop, so growing the sticker pushes the bottom down only half as fast.
+  const roomBelow = p.translateY
+    ? 2 * (lockupTop - p.hookTop) - p.brickHeight - p.gap
+    : lockupTop - p.hookTop - p.brickHeight - p.gap
+  const scaleH = roomBelow / stickerHeight(1)
+
+  // How much horizontal room: the sticker is left-aligned to the block (with a small indent), and
+  // the block's right edge is already the 60% line.
+  const scaleW = (p.blockWidth - VERDICT_INDENT) / stickerWidth(1, p.verdictWidthAtRef)
+
+  const natural = Math.min(scaleH, scaleW, 1)
+  if (natural >= 1) return { scale: 1 }
+
+  const scale = Math.max(natural, MIN_STICKER_SCALE)
+  const pct = Math.round(scale * 100)
+  const reason =
+    scaleH < scaleW
+      ? `the brick is tall enough that the verdict sticker would land on the channel lockup`
+      : `the verdict sticker is wider than the hook block (it must stay inside the 60% line)`
+  const floored =
+    natural < MIN_STICKER_SCALE
+      ? ` It could not shrink far enough (floor ${Math.round(MIN_STICKER_SCALE * 100)}%) — shorten the hook or reduce blockWidth.`
+      : ''
+  return { scale, warning: `[ThumbTemplate] ${reason}; shrunk it to ${pct}%.${floored}` }
+}
+
+/** The sticker's left indent inside the block — a slight step in, so it reads as hanging off the
+ *  brick rather than as another line of it. */
+export const VERDICT_INDENT = 8
+
 export interface ClampedBlock {
   blockWidth: number
   /** Set when the requested width was refused. The caller logs it — a pure function that

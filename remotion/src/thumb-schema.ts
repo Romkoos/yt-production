@@ -80,7 +80,10 @@ export const thumbSchema = z.object({
   logo: thumbLogoSchema,
   // layout controls logo size + centre + hook vertical
   layout: z.enum(['logo-right', 'logo-hero', 'logo-spot']).optional(),
-  verdictPosition: z.enum(['top-right', 'mid-left', 'top-left']).optional(),
+  // 'below-hook' anchors the sticker under the brick's last line, left-aligned to the block with a
+  // slight indent — it reads as hanging off the hook. It inherits the block's 60% clamp, and shrinks
+  // itself if a tall brick would drop it onto the channel lockup. The absolute positions remain.
+  verdictPosition: z.enum(['below-hook', 'top-right', 'mid-left', 'top-left']).optional(),
   // NEW — multiply the layout's logo width (0.4–2×); tune the focal size live
   logoScale: z.number().min(0.4).max(2).optional(),
   accent: zColor().optional(),

@@ -3,7 +3,7 @@ import { AbsoluteFill, Img, staticFile, delayRender, continueRender, cancelRende
 import { loadFonts, FONT_FAMILY, HOOK_FONT_FAMILY, HOOK_FONT_WEIGHT } from './loadFonts'
 import { ChannelLogo } from './ChannelLogo'
 import { BG, DEFAULT_BRANDING, verdictStyle } from './theme'
-import { fitLinesToBlock, clampBlockWidth, REF_SIZE } from './hook-block'
+import { fitLinesToBlock, clampBlockWidth, fitVerdictBelowHook, VERDICT_INDENT, REF_SIZE } from './hook-block'
 import type { HookFont, HookLine, TermTone, ThumbLayout, ThumbLogo, ThumbTemplateProps, VerdictPosition } from './thumb-schema'
 
 // Prop types + the Zod schema live in ./thumb-schema (the single source of truth used both here
@@ -49,6 +49,7 @@ const DEFAULT_BLOCK_WIDTH = Math.round(CANVAS.w * 0.44) // 563px
 const DEFAULT_LINE_SCALE_RATIO = 2
 const BLOCK_TRACKING = -0.02 // em — uppercase wants tighter tracking to read as one mass
 const BLOCK_LINE_HEIGHT = 0.95 // near-zero leading: the lines are meant to touch
+const VERDICT_GAP = 24 // fixed gap between the brick's last line and a below-hook sticker
 
 /** What we DRAW is what we must MEASURE. Uppercasing via CSS `text-transform` would change the
  *  rendered width without changing the string measureText sees, and every line would justify to
@@ -57,38 +58,45 @@ function blockText(text: string, uppercase: boolean): string {
   return uppercase ? text.toUpperCase() : text
 }
 
-/** Glyph widths at REF_SIZE, via canvas measureText. Tracking is applied to the context too:
+/** Glyph widths at REF_SIZE, via canvas measureText. `tracking` is applied to the context too:
  *  it is part of the rendered width, and both scale linearly with font size, so the ratio the
  *  sizing math relies on holds. */
-function measureAtRefSize(texts: string[], family: string, weight: number): number[] {
+function measureAtRefSize(texts: string[], family: string, weight: number, tracking: number): number[] {
   const ctx = document.createElement('canvas').getContext('2d')
   if (!ctx) throw new Error('ThumbTemplate: no 2d canvas context — cannot measure the hook block')
   ctx.font = `${weight} ${REF_SIZE}px ${family}`
   // `letterSpacing` is a Chrome canvas property (Remotion renders in Chrome) that this TS DOM lib
   // does not type yet. Without it the measured width omits tracking and the block overshoots.
-  ;(ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${BLOCK_TRACKING * REF_SIZE}px`
+  ;(ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${tracking * REF_SIZE}px`
   return texts.map((t) => ctx.measureText(t).width)
+}
+
+interface HookMetrics {
+  /** Each hook line's width at REF_SIZE, in the hook face. */
+  lineWidths: number[]
+  /** The verdict word's width at REF_SIZE, in the STICKER's face (Montserrat) — a different face and
+   *  tracking from the hook, so it cannot be derived from the line widths. */
+  verdictWidth: number
 }
 
 /** Measure once the fonts are actually ready, holding the render meanwhile.
  *
  *  The gate is the whole point: measuring before the face has loaded measures the FALLBACK face,
  *  which is a different width per glyph — the block would justify to sizes that are simply wrong,
- *  and on a still render nothing would ever correct them. Returns null until the sizes are known. */
-function useBlockSizes(
+ *  and on a still render nothing would ever correct them. Returns null until the widths are known. */
+function useHookMetrics(
   texts: string[],
   family: string,
   weight: number,
-  blockWidth: number,
-  maxLineScaleRatio: number,
+  verdict: string,
   enabled: boolean,
-): number[] | null {
-  const [sizes, setSizes] = useState<number[] | null>(null)
+): HookMetrics | null {
+  const [metrics, setMetrics] = useState<HookMetrics | null>(null)
   // Studio edits props live, so re-measure whenever anything that moves a glyph changes.
-  const key = JSON.stringify([texts, family, weight, blockWidth, maxLineScaleRatio])
+  const key = JSON.stringify([texts, family, weight, verdict])
 
   useEffect(() => {
-    if (!enabled || texts.length === 0) return
+    if (!enabled) return
     let done = false
     const handle = delayRender('Measuring the hook block')
     const release = () => {
@@ -100,7 +108,11 @@ function useBlockSizes(
     loadFonts()
       .then(() => document.fonts.ready)
       .then(() => {
-        setSizes(fitLinesToBlock(measureAtRefSize(texts, family, weight), blockWidth, { maxLineScaleRatio }))
+        setMetrics({
+          lineWidths: measureAtRefSize(texts, family, weight, BLOCK_TRACKING),
+          // The sticker's own face and tracking — see VerdictPlate.
+          verdictWidth: measureAtRefSize([verdict], FONT_FAMILY, 700, 1 / REF_SIZE)[0],
+        })
         release()
       })
       .catch((err) => cancelRender(err))
@@ -109,7 +121,12 @@ function useBlockSizes(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, enabled])
 
-  return sizes
+  return metrics
+}
+
+/** The layout's `hookTop` in px — it is written as a number or a '%' of the canvas height. */
+function resolveHookTop(top: number | string): number {
+  return typeof top === 'number' ? top : (parseFloat(top) / 100) * CANVAS.h
 }
 
 // Per-layout config: logo size + centre (fraction of canvas) + hook vertical.
@@ -186,8 +203,41 @@ const LogoTile: React.FC<{ logo: ThumbLogo; size: number; glow: string; accent: 
 }
 
 // ── Layer 3: verdict sticker — layered plate, angle, gloss, texture (kept) ─────
-const VerdictSticker: React.FC<{ verdict: string; position: VerdictPosition }> = ({ verdict, position }) => {
+// The PLATE is the sticker's look, independent of where it lands. `below-hook` renders it inline in
+// the hook column; the absolute positions wrap it. `scale` exists for below-hook, where a tall brick
+// can force the sticker to shrink to clear the channel lockup — every dimension scales together, so
+// it shrinks as one object rather than turning into differently-proportioned furniture.
+const VerdictPlate: React.FC<{ verdict: string; scale?: number }> = ({ verdict, scale = 1 }) => {
   const v = verdictStyle(verdict)
+  const radius = 20 * scale
+  return (
+    <div style={{ position: 'relative' }}>
+      <div style={{ position: 'absolute', inset: 0, transform: `translate(${10 * scale}px, ${12 * scale}px)`, background: 'rgba(0,0,0,0.45)', borderRadius: radius, filter: 'blur(2px)' }} />
+      <div
+        style={{
+          position: 'relative',
+          background: `linear-gradient(160deg, ${v.bg} 0%, ${shade(v.bg, -0.18)} 100%)`,
+          color: v.fg,
+          fontFamily: FONT_FAMILY,
+          fontSize: 78 * scale,
+          fontWeight: 700,
+          letterSpacing: 1 * scale,
+          padding: `${14 * scale}px ${42 * scale}px ${18 * scale}px`,
+          borderRadius: radius,
+          border: `${3 * scale}px solid ${shade(v.bg, -0.3)}`,
+          boxShadow: `inset 0 ${3 * scale}px 0 ${shade(v.bg, 0.35)}, inset 0 ${-6 * scale}px ${14 * scale}px ${shade(v.bg, -0.3)}, 0 ${16 * scale}px ${40 * scale}px rgba(0,0,0,0.4)`,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <div style={{ position: 'absolute', inset: 0, borderRadius: radius, background: 'linear-gradient(120deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 42%)', pointerEvents: 'none' }} />
+        {verdict}
+      </div>
+    </div>
+  )
+}
+
+/** The three absolute positions. `below-hook` is NOT one of them — it lives in the hook column. */
+const VerdictSticker: React.FC<{ verdict: string; position: Exclude<VerdictPosition, 'below-hook'> }> = ({ verdict, position }) => {
   const place: React.CSSProperties =
     position === 'mid-left'
       ? { left: PAD - 6, top: '50%', transform: 'translateY(-50%) rotate(-4deg)' }
@@ -197,25 +247,7 @@ const VerdictSticker: React.FC<{ verdict: string; position: VerdictPosition }> =
 
   return (
     <div style={{ position: 'absolute', ...place }}>
-      <div style={{ position: 'absolute', inset: 0, transform: 'translate(10px, 12px)', background: 'rgba(0,0,0,0.45)', borderRadius: 20, filter: 'blur(2px)' }} />
-      <div
-        style={{
-          position: 'relative',
-          background: `linear-gradient(160deg, ${v.bg} 0%, ${shade(v.bg, -0.18)} 100%)`,
-          color: v.fg,
-          fontFamily: FONT_FAMILY,
-          fontSize: 78,
-          fontWeight: 700,
-          letterSpacing: 1,
-          padding: '14px 42px 18px',
-          borderRadius: 20,
-          border: `3px solid ${shade(v.bg, -0.3)}`,
-          boxShadow: `inset 0 3px 0 ${shade(v.bg, 0.35)}, inset 0 -6px 14px ${shade(v.bg, -0.3)}, 0 16px 40px rgba(0,0,0,0.4)`,
-        }}
-      >
-        <div style={{ position: 'absolute', inset: 0, borderRadius: 20, background: 'linear-gradient(120deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 42%)', pointerEvents: 'none' }} />
-        {verdict}
-      </div>
+      <VerdictPlate verdict={verdict} />
     </div>
   )
 }
@@ -266,7 +298,35 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
   if (block.warning) console.warn(block.warning)
 
   const blockLines = useMemo(() => hook.map((l) => blockText(l.text, hookUppercase)), [hook, hookUppercase])
-  const blockSizes = useBlockSizes(blockLines, hookFamily, hookWeight, block.blockWidth, maxLineScaleRatio, hookBlock)
+  const belowHook = verdictPosition === 'below-hook'
+
+  // Measurement is needed for the brick's sizes AND for the below-hook sticker's fit (which depends
+  // on the brick's height, hence on those same sizes).
+  const metrics = useHookMetrics(blockLines, hookFamily, hookWeight, verdict, hookBlock || belowHook)
+  const blockSizes = useMemo(
+    () =>
+      hookBlock && metrics
+        ? fitLinesToBlock(metrics.lineWidths, block.blockWidth, { maxLineScaleRatio })
+        : null,
+    [hookBlock, metrics, block.blockWidth, maxLineScaleRatio],
+  )
+
+  // The sticker hangs off the bottom of the hook column, so it has to know how tall the hook is.
+  const lineSizes = hook.map((line, i) => (hookBlock ? (blockSizes?.[i] ?? SIZE[line.size]) : SIZE[line.size]))
+  const brickHeight = lineSizes.reduce((sum, s) => sum + s * (hookBlock ? BLOCK_LINE_HEIGHT : 1.0), 0)
+
+  const verdictFit =
+    belowHook && metrics
+      ? fitVerdictBelowHook({
+          brickHeight,
+          hookTop: resolveHookTop(cfg.hookTop),
+          translateY: cfg.hookTranslateY,
+          blockWidth: block.blockWidth,
+          gap: VERDICT_GAP,
+          verdictWidthAtRef: metrics.verdictWidth,
+        })
+      : null
+  if (verdictFit?.warning) console.warn(verdictFit.warning)
 
   // Layer 1 — background: programmatic gradient anchored on the logo.
   const background: React.CSSProperties = {
@@ -275,11 +335,40 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
 
   return (
     <AbsoluteFill style={{ ...background, fontFamily: FONT_FAMILY, color: '#e6edf3', overflow: 'hidden' }}>
-      {/* Layer 1 — optional texture */}
+      {/* Layer 1 — optional background image, plus the scrim that buys the hook its contrast.
+          The scrim is where a generated scene was dying. The old one was FULL-FRAME
+          (…f2 0% → …cc 45% → …66 100%), so at the right edge it laid the background colour at 40%
+          alpha directly over the tile — measured: the tile rendered at 55% of the source PNG's
+          luminance, a grey wash over the exact object the scene exists to sell.
+          When the SCENE owns the object, the scrim is confined to the LEFT: it fades to fully
+          transparent by 55% and contributes ZERO darkening right of 60%, so the object zone renders
+          at the source's own brightness. A plain library background has no drama of its own to
+          protect, so it keeps the original full-frame treatment. */}
       {bgImage ? (
         <>
           <Img src={staticFile(bgImage)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-          <AbsoluteFill style={{ background: `linear-gradient(90deg, ${BG}f2 0%, ${BG}cc 45%, ${BG}66 100%)` }} />
+          {objectInScene ? (
+            <>
+              {/* hook contrast — left only, gone well before the 60% line */}
+              <AbsoluteFill
+                style={{ background: `linear-gradient(90deg, ${BG}f2 0%, ${BG}e0 28%, ${BG}80 44%, ${BG}00 55%)` }}
+              />
+              {/* footer — a small pad under the channel lockup so the wordmark holds up on a lit scene */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  bottom: 0,
+                  width: '46%',
+                  height: 150,
+                  background: `linear-gradient(0deg, ${BG}d9 0%, ${BG}00 100%)`,
+                  pointerEvents: 'none',
+                }}
+              />
+            </>
+          ) : (
+            <AbsoluteFill style={{ background: `linear-gradient(90deg, ${BG}f2 0%, ${BG}cc 45%, ${BG}66 100%)` }} />
+          )}
         </>
       ) : null}
 
@@ -358,7 +447,7 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
         {hook.map((line, i) => {
           // Until the fonts load, blockSizes is null — the render is held by delayRender, so this
           // fallback never reaches a captured frame; it only keeps the first paint sane.
-          const size = hookBlock ? (blockSizes?.[i] ?? SIZE[line.size]) : SIZE[line.size]
+          const size = lineSizes[i]
           return (
             <span
               key={i}
@@ -377,10 +466,28 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
             </span>
           )
         })}
+
+        {/* text (2) — the verdict, hanging off the brick. Being a CHILD of the hook column is what
+            anchors it: it sits under the last line by construction, left-aligned to the block (plus a
+            slight indent so it reads as a separate stamp), and it inherits the block's 60% clamp
+            because it can only be as wide as the block it lives in. */}
+        {belowHook ? (
+          <div
+            style={{
+              alignSelf: 'flex-start',
+              marginLeft: VERDICT_INDENT,
+              marginTop: VERDICT_GAP,
+              transform: 'rotate(-4deg)',
+              transformOrigin: 'left center',
+            }}
+          >
+            <VerdictPlate verdict={verdict} scale={verdictFit?.scale ?? 1} />
+          </div>
+        ) : null}
       </div>
 
-      {/* text (2) — verdict sticker (out of the bottom-right timestamp zone) */}
-      <VerdictSticker verdict={verdict} position={verdictPosition} />
+      {/* the absolute verdict positions (out of the bottom-right timestamp zone) */}
+      {belowHook ? null : <VerdictSticker verdict={verdict} position={verdictPosition} />}
 
       {/* channel lockup, bottom-left (branding decoration) — our mark + wordmark.
           NOTE: the top-left `>_` box is the REPO identity slot, left untouched. */}

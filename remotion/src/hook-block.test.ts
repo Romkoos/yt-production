@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fitLinesToBlock, clampBlockWidth, TEXT_ZONE_FRACTION, REF_SIZE } from './hook-block'
+import { fitLinesToBlock, clampBlockWidth, fitVerdictBelowHook, stickerHeight, stickerWidth, MIN_STICKER_SCALE, TEXT_ZONE_FRACTION, REF_SIZE } from './hook-block'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The brick: every hook line is scaled so its RENDERED width equals the block
@@ -119,5 +119,82 @@ describe('clampBlockWidth — the brick can never cross the 60% line', () => {
     const r = clampBlockWidth(760, { padding: 120, frameWidth: 1280 })
     expect(r.blockWidth).toBe(648) // 768 - 120
     expect(r.blockWidth + 120).toBeLessThanOrEqual(1280 * TEXT_ZONE_FRACTION)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The verdict sticker, anchored below the brick.
+//
+// Two things can go wrong when the sticker hangs off the bottom of the hook, and both are
+// geometry, not taste: it can run past the 60% line into the object's zone, and it can drop onto
+// the channel lockup in the bottom-left. A tall brick (many lines, or a big blockWidth) makes the
+// second one certain. So the sticker gets ONE scale factor that satisfies both constraints, and
+// the host is told whenever it had to shrink — a sticker that silently shrank is a sticker whose
+// size no longer means anything.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const STICKER = {
+  hookTop: 360,
+  translateY: true,
+  blockWidth: 563,
+  gap: 24,
+  lockupTop: 620,
+  // "ГОДНОТА" measured at REF_SIZE in the sticker's face
+  verdictWidthAtRef: 430,
+}
+
+describe('fitVerdictBelowHook — the sticker clears both the 60% line and the channel lockup', () => {
+  it('leaves the sticker at full size when the brick is short enough', () => {
+    const r = fitVerdictBelowHook({ ...STICKER, brickHeight: 200 })
+    expect(r.scale).toBe(1)
+    expect(r.warning).toBeUndefined()
+  })
+
+  it('shrinks the sticker — and says so — when a tall brick would push it onto the lockup', () => {
+    const r = fitVerdictBelowHook({ ...STICKER, brickHeight: 400 })
+    expect(r.scale).toBeLessThan(1)
+    expect(r.warning).toMatch(/lockup|channel/i)
+  })
+
+  it('keeps the shrunk sticker clear of the lockup — the point is that it FITS, not that it warned', () => {
+    // 400px of brick still leaves room to shrink INTO. (A brick so tall that even the floor scale
+    // cannot clear the lockup is a different outcome — see the floor test below, which asserts the
+    // sticker stays legible and the host gets told, rather than the sticker vanishing.)
+    const brickHeight = 400
+    const r = fitVerdictBelowHook({ ...STICKER, brickHeight })
+    expect(r.scale).toBeGreaterThan(MIN_STICKER_SCALE) // shrunk, but not against the floor
+    const content = brickHeight + STICKER.gap + stickerHeight(r.scale)
+    const bottom = STICKER.hookTop - content / 2 + content // translateY: centre the whole column
+    expect(bottom).toBeLessThanOrEqual(STICKER.lockupTop + 0.01)
+  })
+
+  it('honours the un-centred layouts too (translateY false anchors the top)', () => {
+    const brickHeight = 300
+    const r = fitVerdictBelowHook({ ...STICKER, translateY: false, hookTop: 168, brickHeight })
+    const bottom = 168 + brickHeight + STICKER.gap + stickerHeight(r.scale)
+    expect(bottom).toBeLessThanOrEqual(STICKER.lockupTop + 0.01)
+  })
+
+  it('shrinks a sticker whose WIDTH would cross the block edge — the 60% clamp binds it too', () => {
+    // A very wide verdict word in a narrow block: width, not height, is what limits it here.
+    const r = fitVerdictBelowHook({ ...STICKER, brickHeight: 150, blockWidth: 300, verdictWidthAtRef: 430 })
+    expect(r.scale).toBeLessThan(1)
+    expect(stickerWidth(r.scale, 430)).toBeLessThanOrEqual(300)
+    expect(r.warning).toMatch(/width|block/i)
+  })
+
+  it('never shrinks past the floor — an illegible sticker is not a fix', () => {
+    const r = fitVerdictBelowHook({ ...STICKER, brickHeight: 900 })
+    expect(r.scale).toBeGreaterThanOrEqual(MIN_STICKER_SCALE)
+    expect(r.warning).toBeDefined()
+  })
+
+  it('admits it when even the floor cannot clear the lockup, instead of pretending it fits', () => {
+    // The honest failure. Shrinking has a floor, so past a certain brick height the sticker WILL
+    // overlap — and the only useful thing the code can do is stop shrinking and say what to change.
+    const r = fitVerdictBelowHook({ ...STICKER, brickHeight: 460 })
+    expect(r.scale).toBe(MIN_STICKER_SCALE)
+    expect(r.warning).toMatch(/could not shrink far enough/i)
+    expect(r.warning).toMatch(/shorten the hook|blockWidth/i)
   })
 })
