@@ -15,11 +15,22 @@ describe('hookText', () => {
 })
 
 describe('variantSummary', () => {
-  it('extracts hook text and verdict from props', () => {
-    expect(variantSummary({ hook: [{ text: 'UI без' }, { text: 'сборки' }], verdict: 'ГОДНОТА' })).toEqual({
+  it('extracts hook text, verdict and background from props', () => {
+    expect(
+      variantSummary({
+        hook: [{ text: 'UI без' }, { text: 'сборки' }],
+        verdict: 'ГОДНОТА',
+        bgImage: 'gen/2026-07-ep001/scene-real-avatar-v1.png',
+      }),
+    ).toEqual({
       hookText: 'UI без сборки',
       verdict: 'ГОДНОТА',
+      bgImage: 'gen/2026-07-ep001/scene-real-avatar-v1.png',
     })
+  })
+
+  it('reports an empty background when the variant has none', () => {
+    expect(variantSummary({ hook: [], verdict: 'ХАЙП' }).bgImage).toBe('')
   })
 })
 
@@ -60,8 +71,8 @@ describe('pickEpisode', () => {
 
 describe('buildIndexHtml', () => {
   const items: SheetItem[] = [
-    { label: 'A — clean right', fullFile: 'thumb-v1.png', thumbFile: 'thumb-v1.120.png', fullMtime: 111, thumbMtime: 112, hookText: 'Дизайн-система Meta', verdict: 'ГОДНОТА' },
-    { label: 'B — hero', fullFile: 'thumb-v2.png', thumbFile: 'thumb-v2.120.png', fullMtime: 221, thumbMtime: 222, hookText: 'UI для тебя и AI', verdict: 'ГОДНОТА' },
+    { label: 'A — clean right', fullFile: 'thumb-v1.png', thumbFile: 'thumb-v1.120.png', fullMtime: 111, thumbMtime: 112, hookText: 'Дизайн-система Meta', verdict: 'ГОДНОТА', bgImage: 'gen/2026-07-ep001/scene-real-avatar-v1.png' },
+    { label: 'B — hero', fullFile: 'thumb-v2.png', thumbFile: 'thumb-v2.120.png', fullMtime: 221, thumbMtime: 222, hookText: 'UI для тебя и AI', verdict: 'ГОДНОТА', bgImage: '' },
   ]
   const html = buildIndexHtml(items, { episode: '2026-07-ep001' })
 
@@ -90,5 +101,15 @@ describe('buildIndexHtml', () => {
     const evil = buildIndexHtml([{ ...items[0], hookText: 'a < b & "c"' }])
     expect(evil).toContain('a &lt; b &amp; &quot;c&quot;')
     expect(evil).not.toContain('a < b & "c"')
+  })
+
+  it('prints the background each variant uses', () => {
+    expect(html).toContain('gen/2026-07-ep001/scene-real-avatar-v1.png')
+  })
+
+  it('marks a variant with no background rather than leaving it blank', () => {
+    // Anchored to the bg field: a bare toContain('—') would pass vacuously, since the em-dash
+    // also appears in every variant label ("A — clean right").
+    expect(html).toContain('<span class="k">bg</span> —')
   })
 })
