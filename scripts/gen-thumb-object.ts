@@ -20,7 +20,11 @@
 // Usage:
 //   gen-thumb-object.ts --mode <real-avatar|known-logo|category-object>
 //                       [--episode <id>] [--scene] [--subject "<text>"]
-//                       [--model <id>] [--dry-run]
+//                       [--accent "<colour>"] [--model <id>] [--dry-run]
+//
+//   --accent  colours the scene's accent lighting (default: green, the ГОДНОТА palette) so a
+//             generated background matches the episode's verdict. --scene only; the object
+//             variant is isolated on black and has no accent lighting to colour.
 //   gen-thumb-object.ts --episode <id> --mirror-only     (free; no key, no network)
 //
 // Auth: GEMINI_API_KEY from the environment. Never logged, never written to disk.
@@ -32,11 +36,13 @@ import { join } from 'node:path'
 import {
   appendGenLog,
   buildPrompt,
+  DEFAULT_SCENE_ACCENT,
   estimateCostUsd,
   extractInlineImages,
   modeUsesSubject,
   nextVersion,
   PRICES_AS_OF,
+  variantUsesAccent,
   type GenLog,
   type GenMode,
   type GenResponse,
@@ -53,6 +59,7 @@ interface Args {
   episode?: string
   variant: GenVariant
   subject?: string
+  accent: string // colours the scene's accent lighting; ignored by the object variant
   model: string
   dryRun: boolean
   mirrorOnly: boolean
@@ -68,11 +75,18 @@ function takeValue(argv: string[], i: number, flag: string): string {
 }
 
 function parseArgs(argv: string[]): Args {
-  const out: Partial<Args> = { variant: 'object', model: DEFAULT_MODEL, dryRun: false, mirrorOnly: false }
+  const out: Partial<Args> = {
+    variant: 'object',
+    accent: DEFAULT_SCENE_ACCENT,
+    model: DEFAULT_MODEL,
+    dryRun: false,
+    mirrorOnly: false,
+  }
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--mode') out.mode = takeValue(argv, ++i, '--mode') as GenMode
     else if (argv[i] === '--episode') out.episode = takeValue(argv, ++i, '--episode')
     else if (argv[i] === '--subject') out.subject = takeValue(argv, ++i, '--subject')
+    else if (argv[i] === '--accent') out.accent = takeValue(argv, ++i, '--accent')
     else if (argv[i] === '--model') out.model = takeValue(argv, ++i, '--model')
     else if (argv[i] === '--scene') out.variant = 'scene'
     else if (argv[i] === '--dry-run') out.dryRun = true
@@ -211,7 +225,7 @@ async function main(): Promise<void> {
 
   // real-avatar's subject IS the attached avatar; the text-only modes need --subject
   // (buildPrompt enforces this — it throws before any network call is made).
-  const prompt = buildPrompt(mode, args.variant, args.subject)
+  const prompt = buildPrompt(mode, args.variant, args.subject, args.accent)
 
   let referencePath: string | undefined
   if (mode === 'real-avatar') {
@@ -226,6 +240,7 @@ async function main(): Promise<void> {
       `[gen-thumb-object] DRY RUN — no API key read, no network call\n` +
         `  episode:   ${episode}\n` +
         `  mode:      ${mode}   variant: ${args.variant}   model: ${args.model}\n` +
+        (variantUsesAccent(args.variant) ? `  accent:    ${args.accent}\n` : '') +
         (referencePath ? `  reference: ${referencePath}\n` : '') +
         `\n${prompt}\n`,
     )
@@ -304,9 +319,10 @@ async function main(): Promise<void> {
         mode,
         variant: args.variant,
         model: args.model,
-        // Only what actually shaped the prompt: real-avatar ignores --subject, so recording it
-        // would imply an input that never reached the model.
+        // Only what actually shaped the prompt: real-avatar ignores --subject and the object variant
+        // ignores --accent, so recording either would imply an input that never reached the model.
         subject: modeUsesSubject(mode) ? args.subject : undefined,
+        sceneAccent: variantUsesAccent(args.variant) ? args.accent : undefined,
         prompt,
         referenceImage: referencePath,
         outputs,
