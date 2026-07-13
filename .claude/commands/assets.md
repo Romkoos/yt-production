@@ -87,6 +87,16 @@ the *focal* centre tile, not in the header. Caveat before implementing: the avat
 focal object, so a second copy in the header may read as redundant — decide per layout (a small
 monochrome/rounded header mark can still help brand-vs-repo legibility). Not yet wired to a prop.
 
+**Generative backgrounds (optional).** `/gen-thumb-object` generates a focal object or a full
+background scene with the Gemini image API. Generated **scenes** are mirrored to
+`remotion/public/gen/<ep>/` and feed `ThumbTemplate`'s `bgImage` prop — paste the path the script
+prints into a variant's `props` in `thumb-variants.json` and re-run the contact sheet. Generated
+**objects** are archived but not yet consumed: the `ThumbTemplate` object layer is a follow-up.
+
+Generated images never contain text (thumbnail text is always a programmatic render) and never
+carry a fabricated brand mark — see `/gen-thumb-object` for the per-mode guarantees and the
+`--dry-run` audit surface.
+
 ---
 
 ## Step 4 — Generate prep docs
