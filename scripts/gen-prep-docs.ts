@@ -42,14 +42,17 @@ function buildShotlist(episode: string, repo: string, md: string): string {
   const cues = extractScreencastCues(md)
   let out = `# SHOTLIST — ${episode} (${repo})\n\n`
   out += `Чек-лист записи для Screen Studio. Каждый \`[СКРИНКАСТ]\`-кью из script.md, по порядку.\n`
-  out += `Это clock (b): запись делается позже, тайминга здесь нет — только что снять.\n\n`
+  out += `Это clock (b): запись делается позже, тайминга здесь нет — только что снять.\n`
+  out += `Каждый пункт N ведёт в свой блок \`#scene-N\` в [REPRO.md](REPRO.md) — там точные команды,\n`
+  out += `что появится на экране, WAIT/CUT и как переснять.\n\n`
   let currentBeat = ''
   cues.forEach((c, i) => {
     if (c.beat !== currentBeat) {
       currentBeat = c.beat
       out += `\n## ${c.beat}\n\n`
     }
-    out += `- [ ] ${i + 1}. ${c.raw}\n`
+    // Item N ↔ REPRO SCENE N: both derive from the same ordered [СКРИНКАСТ] cue list.
+    out += `- [ ] ${i + 1}. ${c.raw} · [↗ REPRO](REPRO.md#scene-${i + 1})\n`
   })
   return out
 }

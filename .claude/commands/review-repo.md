@@ -148,14 +148,50 @@ Fill in **every** section — do not leave any as the template's placeholder tex
 
 ---
 
-## Step 6 — Update STATE.md
+## Step 6 — Write the reproduction protocol (SETUP + failures)
+
+The host must be able to **record the episode without understanding the repo internals**.
+That path lives in `episodes/<ep>/REPRO.md`. Copy the template and fill the parts you can
+already know from the sandbox and `report.md` — the per-scene blocks come later, in
+`/script` (there is no `script.md` yet):
+
+```bash
+cp templates/REPRO.md episodes/<ep>/REPRO.md
+```
+
+Fill these sections now:
+
+- **`## Prepared states`** — list ready-to-record states left in the sandbox so no take
+  waits on a long install/build/test (e.g. deps already installed, packages already
+  built — name each and which work it saves). If a scene will need a **clean** state (the
+  install take), say how to get one without destroying the built state (a second clone),
+  so recording order isn't forced.
+- **`## SETUP — zero to running`** — exact copy-paste commands from a clean clone to a
+  running project, using the flags that **actually worked** (e.g. `--ignore-scripts`), the
+  env vars (or "none"), and for **each step** an expected duration + a success indicator
+  to watch for (`~40s, ends with "ready on :3000"`). Write the workarounds you discovered,
+  not the README's version.
+- **`## Failure recipes`** — the interesting breakages from the report's «Сломалось», each
+  with the exact trigger command(s) and the exact error text shown. If a failure was
+  flaky / environment-dependent, say so explicitly and mark it "capture from agent test
+  logs instead" rather than pretending it reproduces on demand.
+
+Leave the **`## Scenes`** section as the template stub and the **Recording time budget**
+placeholder — `/script` fills them (one SCENE block per `[СКРИНКАСТ]` cue). Same honesty
+rule as `report.md`: every command, duration, and success indicator must be what actually
+happened in the sandbox — never the README's claim or an invented value.
+
+---
+
+## Step 7 — Update STATE.md
 
 Edit `episodes/<ep>/STATE.md`:
 
 - Frontmatter: set `current_phase: review` and `phase_status: done`. Set
   `updated:` to today's date (`YYYY-MM-DD`).
 - `## Artifacts`: update the `report.md` line to show it's present (e.g.
-  `report.md: present`) and update the `sandbox/` line to point at the cloned path
+  `report.md: present`), the `REPRO.md` line to `REPRO.md: present (setup + failures; scenes pending /script)`,
+  and update the `sandbox/` line to point at the cloned path
   (e.g. `sandbox/: episodes/<ep>/sandbox/<repo>`).
 - `## Next action`: replace it with `Run /script`.
 - `## Phase checklist`: check the `review` box (`- [x] review`).
@@ -170,11 +206,11 @@ rest of the checklist) untouched — this command only owns the review phase.
 
 ---
 
-## Step 7 — Record metrics
+## Step 8 — Record metrics
 
 Append a `phase_metrics` row for this run (phase `review`), and make sure an `episodes`
 row exists first (insert it if this is the first phase recorded for this episode).
-Track `startedAt` from when you began Step 2 (the clone) and `endedAt` when Step 6
+Track `startedAt` from when you began Step 2 (the clone) and `endedAt` when Step 7
 finishes; count `iterations` as the number of install/run attempts you made in Step 4
 (1 if it worked cleanly on the first try, more if you had to retry).
 
@@ -221,9 +257,10 @@ already be migrated (`pnpm db:migrate`) — run that first if the tables don't e
 ## Output contract / side-effects
 
 This command writes **only**:
-- Inside `episodes/<ep>/` — the new/updated `STATE.md`, `report.md`, and everything
-  under `episodes/<ep>/sandbox/` (the cloned repo and anything it produces while
-  running).
+- Inside `episodes/<ep>/` — the new/updated `STATE.md`, `report.md`, `REPRO.md` (SETUP +
+  Prepared states + Failure recipes; scene blocks filled later by `/script`), and
+  everything under `episodes/<ep>/sandbox/` (the cloned repo and anything it produces
+  while running).
 - `db/tracker.sqlite` — the episode row (if new) and one new `phaseMetrics` row.
 
 Nothing is installed or written globally, nothing outside `episodes/<ep>/` and

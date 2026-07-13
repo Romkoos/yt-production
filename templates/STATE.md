@@ -25,6 +25,7 @@ Run `/review-repo {{REPO_URL}}` for this episode.
 
 ## Artifacts
 - report.md: —
+- REPRO.md: —
 - script.md: —
 - sandbox/: —
 - assets/: —
