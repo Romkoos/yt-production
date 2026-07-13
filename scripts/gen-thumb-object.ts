@@ -19,12 +19,14 @@
 //
 // Usage:
 //   gen-thumb-object.ts --mode <real-avatar|known-logo|category-object>
-//                       [--episode <id>] [--scene] [--subject "<text>"]
+//                       [--episode <id>] [--scene] [--apply] [--subject "<text>"]
 //                       [--accent "<colour>"] [--model <id>] [--dry-run]
 //
 //   --accent  colours the scene's accent lighting (default: green, the ГОДНОТА palette) so a
 //             generated background matches the episode's verdict. --scene only; the object
 //             variant is isolated on black and has no accent lighting to colour.
+//   --apply   write the generated scene into every variant of the episode's thumb-variants.json
+//             (bgImage + objectInScene). --scene only. See applyScene() below.
 //   gen-thumb-object.ts --episode <id> --mirror-only     (free; no key, no network)
 //
 // Auth: GEMINI_API_KEY from the environment. Never logged, never written to disk.
@@ -50,6 +52,7 @@ import {
   type ImageGenerator,
   type InlineImage,
 } from './lib/gemini-image'
+import { applySceneToVariants, assertVariants } from './lib/thumb-variants'
 
 const DEFAULT_MODEL = 'gemini-3-pro-image-preview' // Nano Banana Pro — best logo/text fidelity
 const MODES: GenMode[] = ['real-avatar', 'known-logo', 'category-object']
@@ -63,6 +66,7 @@ interface Args {
   model: string
   dryRun: boolean
   mirrorOnly: boolean
+  apply: boolean // write the generated scene into the episode's thumb-variants.json
 }
 
 /** The value after a value-taking flag. A missing value — or the next flag swallowed as one
@@ -81,6 +85,7 @@ function parseArgs(argv: string[]): Args {
     model: DEFAULT_MODEL,
     dryRun: false,
     mirrorOnly: false,
+    apply: false,
   }
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--mode') out.mode = takeValue(argv, ++i, '--mode') as GenMode
@@ -91,6 +96,16 @@ function parseArgs(argv: string[]): Args {
     else if (argv[i] === '--scene') out.variant = 'scene'
     else if (argv[i] === '--dry-run') out.dryRun = true
     else if (argv[i] === '--mirror-only') out.mirrorOnly = true
+    else if (argv[i] === '--apply') out.apply = true
+  }
+  // --apply writes a GENERATED SCENE into thumb-variants.json. Every mode that produces no scene to
+  // write is a mistake worth naming, not a silent no-op the host discovers by finding the file
+  // unchanged: --dry-run and --mirror-only generate nothing, and the object variant has no bgImage
+  // consumer (ThumbTemplate's object layer is still a follow-up).
+  if (out.apply) {
+    if (out.dryRun) throw new Error('--apply has nothing to apply in a --dry-run (nothing is generated)')
+    if (out.mirrorOnly) throw new Error('--apply has nothing to apply with --mirror-only (nothing is generated)')
+    if (out.variant !== 'scene') throw new Error('--apply writes a background scene — add --scene (the object variant has no bgImage consumer yet)')
   }
   if (out.mirrorOnly) return out as Args
   if (!out.mode) throw new Error(`--mode <${MODES.join('|')}> is required`)
@@ -181,6 +196,23 @@ function readGenLog(logPath: string): GenLog | null {
   return parsed as GenLog
 }
 
+/** --apply's write step: point every variant of the episode's thumb-variants.json at the scene we
+ *  just generated, closing the copy-paste gap between a `--scene` run and /thumbs-preview.
+ *
+ *  It EDITS a tracked, hand-maintained file — so it refuses a missing or malformed one rather than
+ *  scaffolding over it (assertVariants already said so, for free, before the billed call). And it
+ *  writes bgImage and objectInScene TOGETHER: a bgImage without objectInScene renders the object
+ *  twice (the scene bakes one in, ThumbTemplate draws another). */
+function applyScene(variantsPath: string, bgImage: string): void {
+  const { text, changes } = applySceneToVariants(readFileSync(variantsPath, 'utf8'), bgImage)
+  if (changes.length === 0) {
+    process.stdout.write(`\n${variantsPath}: every variant already points at this scene — unchanged.\n`)
+    return
+  }
+  writeFileSync(variantsPath, text)
+  process.stdout.write(`\nApplied → ${variantsPath}\n` + changes.map((c) => `  ✓ ${c}\n`).join(''))
+}
+
 /** The real ImageGenerator. The ONLY place the SDK is touched. */
 function createGeminiGenerator(apiKey: string): ImageGenerator {
   const ai = new GoogleGenAI({ apiKey })
@@ -254,6 +286,19 @@ async function main(): Promise<void> {
   // after the PNGs were written would throw with paid images already on disk and no audit record.
   const logPath = join('episodes', episode, 'assets', 'gen-log.json')
   const existingLog: GenLog | null = readGenLog(logPath)
+
+  // Same rule for --apply's target: a missing or malformed thumb-variants.json must fail HERE, not
+  // after the images are paid for. This file is the host's — we edit it, we never author it.
+  const variantsPath = join('episodes', episode, 'assets', 'thumb-variants.json')
+  if (args.apply) {
+    if (!existsSync(variantsPath)) {
+      throw new Error(
+        `--apply edits ${variantsPath}, and it is not there. It never scaffolds one — create the ` +
+          `variant set first (/assets writes it), then re-run.`,
+      )
+    }
+    assertVariants(readFileSync(variantsPath, 'utf8'))
+  }
 
   const genDir = join('episodes', episode, 'assets', 'gen')
   mkdirSync(genDir, { recursive: true })
@@ -336,23 +381,41 @@ async function main(): Promise<void> {
 
   for (const file of outputs) {
     process.stdout.write(`  ✓ ${file}   (${costText})\n`)
-    if (args.variant === 'scene') {
-      // Both lines, together, are the paste-ready snippet. A scene BAKES the logo tile into the
-      // background, and ThumbTemplate draws its own LogoTile unless objectInScene is set — so
-      // pasting the bgImage line alone renders the logo twice, in two places. Printing the pair is
-      // what keeps that from being a switch the host has to remember (/thumbs-preview also warns).
+    // Both lines, together, are the paste-ready snippet (--apply writes them for you). A scene BAKES
+    // the logo tile into the background, and ThumbTemplate draws its own LogoTile unless
+    // objectInScene is set — so pasting the bgImage line alone renders the logo twice, in two
+    // places. Printing the pair is what keeps that from being a switch the host has to remember
+    // (/thumbs-preview also warns).
+    if (args.variant === 'scene' && !args.apply) {
       process.stdout.write(`    bgImage: "gen/${episode}/${file}"\n`)
       process.stdout.write(`    objectInScene: true\n`)
     }
   }
   process.stdout.write(`\nArchive: ${genDir}\nLogged:  ${logPath}\n`)
-  if (args.variant === 'scene') {
+
+  if (args.variant !== 'scene') return
+
+  if (!args.apply) {
     process.stdout.write(
       `Paste BOTH lines into each variant's props in episodes/${episode}/assets/thumb-variants.json, then run\n` +
-        `/thumbs-preview. objectInScene hands the object to the scene — without it the template draws its own\n` +
-        `logo tile on top of the one baked into the scene.\n`,
+        `pnpm thumbs. objectInScene hands the object to the scene — without it the template draws its own\n` +
+        `logo tile on top of the one baked into the scene. (Or let \`pnpm scene\` do it: it passes --apply.)\n`,
+    )
+    return
+  }
+
+  // One response can carry several images. They are alternatives, not a set — so apply the first and
+  // SAY that the others exist, with their paste lines. Silently picking one of N and printing
+  // nothing would hide generated work the host paid for.
+  applyScene(variantsPath, `gen/${episode}/${outputs[0]}`)
+  if (outputs.length > 1) {
+    process.stdout.write(
+      `\nThis run returned ${outputs.length} images; --apply used the first. To use another instead, put its\n` +
+        `bgImage line into each variant of thumb-variants.json by hand:\n` +
+        outputs.slice(1).map((f) => `    bgImage: "gen/${episode}/${f}"\n`).join(''),
     )
   }
+  process.stdout.write(`\nNext: pnpm thumbs\n`)
 }
 
 main().catch((e) => {

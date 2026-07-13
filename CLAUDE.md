@@ -126,11 +126,18 @@ Never write an `MM:SS`-style timecode in a report or script draft.
 - **Content language: Russian** (scripts, report section content, on-screen text).
 - **Code + commit messages: English.**
 - Package manager: **pnpm**. Node 22. Tests: vitest (`pnpm test`).
+- **The CLI tail of the pipeline is pnpm scripts** — `pnpm flow` (where am I / what's next),
+  `pnpm scene` + `pnpm thumbs` (the thumbnail leg), `pnpm studio`, `pnpm chart`, `pnpm prep`. They
+  are the stable programmatic surface (a future UI sits on them): prefer them over raw
+  `tsx scripts/…` invocations, and add a script rather than documenting a long one. Each defaults to
+  the newest episode; target another with `pnpm <script> -- --episode <id>`. Names must not shadow an
+  npm/pnpm built-in — `stars` does, and pnpm silently runs npm's instead of yours.
 - Metrics DB is local: `db/tracker.sqlite` (Drizzle). It has NO connection to any global
   tracker. Migrate with `pnpm db:migrate`.
-- Remotion is a **standalone package** under `remotion/` (own lockfile). Install/run it from there
-  with the flag — `cd remotion && pnpm install --ignore-workspace && pnpm studio` — and add deps with
-  `pnpm add <pkg> --ignore-workspace`. **pnpm 9 has no `ignore-workspace` .npmrc key** (CLI flag only):
+- Remotion is a **standalone package** under `remotion/` (own lockfile). **Install** it from there
+  with the flag — `cd remotion && pnpm install --ignore-workspace` — and add deps with
+  `pnpm add <pkg> --ignore-workspace`. (Running it is just `pnpm studio` from the root; only the
+  install is dangerous.) **pnpm 9 has no `ignore-workspace` .npmrc key** (CLI flag only):
   a plain `pnpm install` silently writes a `remotion:` importer into the **root** `pnpm-lock.yaml`.
   If a root `pnpm-lock.yaml` diff ever contains a `remotion:` importer, the install was run wrong —
   `git checkout HEAD -- pnpm-lock.yaml`, then reinstall with `--ignore-workspace`. The
