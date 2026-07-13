@@ -7,16 +7,28 @@
       "glowColor": "#1877f2",
       "repoName": "facebook/astryx",
       "verdict": "ГОДНОТА",
-      "verdictPosition": "below-hook",
-      "logo": { "src": "thumb/logo-facebook.png", "glyph": ">_" },
+      "verdictPosition": "in-brick",
+      "logo": {
+        "src": "thumb/logo-facebook.png",
+        "glyph": ">_"
+      },
       "hookBlock": true,
       "hookFont": "unbounded",
       "hook": [
-        { "text": "Дизайн-система", "size": "md", "weight": 700 },
-        { "text": "Meta", "size": "xl", "accent": true }
+        {
+          "text": "Дизайн-система",
+          "size": "md",
+          "weight": 700
+        },
+        {
+          "text": "Meta",
+          "size": "xl",
+          "accent": true
+        }
       ],
       "bgImage": "gen/2026-07-ep001/scene-real-avatar-v2.png",
-      "objectInScene": true
+      "objectInScene": true,
+      "maxLineScaleRatio": 3.6
     }
   },
   {
@@ -27,38 +39,65 @@
       "glowColor": "#1877f2",
       "repoName": "facebook/astryx",
       "verdict": "ГОДНОТА",
-      "verdictPosition": "below-hook",
-      "logo": { "src": "thumb/logo-facebook.png", "glyph": ">_" },
-      "texture": { "text": "$ pnpm install --ignore-scripts", "tone": "dim" },
+      "verdictPosition": "in-brick",
+      "logo": {
+        "src": "thumb/logo-facebook.png",
+        "glyph": ">_"
+      },
+      "texture": {
+        "text": "$ pnpm install --ignore-scripts",
+        "tone": "dim"
+      },
       "hookBlock": true,
       "hookFont": "unbounded",
       "hook": [
-        { "text": "UI для тебя и", "size": "md", "weight": 700 },
-        { "text": "AI", "size": "xl", "accent": true }
+        {
+          "text": "UI для тебя и",
+          "size": "md",
+          "weight": 700
+        },
+        {
+          "text": "AI",
+          "size": "xl",
+          "accent": true
+        }
       ],
       "bgImage": "gen/2026-07-ep001/scene-real-avatar-v2.png",
-      "objectInScene": true
+      "objectInScene": true,
+      "maxLineScaleRatio": 3.0
     }
   },
   {
     "label": "C — spotlight",
     "props": {
       "layout": "logo-spot",
-      "accent": "#3fb950",
+      "accent": "#ffffff",
       "glowColor": "#1877f2",
       "repoName": "facebook/astryx",
       "verdict": "ГОДНОТА",
-      "verdictPosition": "below-hook",
-      "logo": { "src": "thumb/logo-facebook.png", "glyph": ">_" },
+      "verdictPosition": "in-brick",
+      "logo": {
+        "src": "thumb/logo-facebook.png",
+        "glyph": ">_"
+      },
       "logoScale": 0.82,
       "hookBlock": true,
       "hookFont": "unbounded",
       "hook": [
-        { "text": "Стоит", "size": "md", "weight": 700 },
-        { "text": "переходить?", "size": "lg", "accent": true }
+        {
+          "text": "Стоит",
+          "size": "md",
+          "weight": 700
+        },
+        {
+          "text": "переходить?",
+          "size": "lg",
+          "accent": true
+        }
       ],
       "bgImage": "gen/2026-07-ep001/scene-real-avatar-v2.png",
-      "objectInScene": true
+      "objectInScene": true,
+      "maxLineScaleRatio": 2.3
     }
   }
 ]

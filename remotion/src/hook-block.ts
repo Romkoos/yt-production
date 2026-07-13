@@ -58,98 +58,99 @@ export function fitLinesToBlock(measuredWidths: number[], blockWidth: number, ca
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The verdict sticker, anchored below the brick (verdictPosition: 'below-hook').
+// The verdict as the brick's LAST LINE (verdictPosition: 'in-brick').
 //
-// The sticker hangs off the bottom of the hook column, so its position is a FUNCTION of the brick's
-// height — which is itself a function of the measured line sizes. Two things it must not do: cross
-// the 60% line into the object's zone, and land on the channel lockup in the bottom-left. A tall
-// brick makes the second one certain, so the sticker gets one scale factor satisfying both.
+// A FLAT badge spanning the full block width, so the block closes on a hard horizontal edge. Flat
+// is the point: the old 3D bevelled-and-tilted sticker reads as a foreign object glued onto a flat
+// typographic lockup. Here it is another row of the same block.
+//
+// The badge's WIDTH is fixed (it spans the block), so the only free variable is its font size, and
+// three separate things bound it. It takes the smallest, because each bound is a real failure:
+//   · 0.7× the largest hook line — else the verdict out-shouts the hook it is supposed to answer
+//   · the block's inner width     — else the word spills out of the badge that contains it
+//   · the channel lockup          — else a tall brick pushes the badge onto the wordmark
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** The sticker's metrics at scale 1 — must match VerdictSticker's CSS. */
-const STICKER_FONT = 78
-const STICKER_LINE_BOX = STICKER_FONT * 1.2 // the text's line box
-const STICKER_PAD_Y = 14 + 18 // padding: '14px 42px 18px'
-const STICKER_PAD_X = 42 * 2
-const STICKER_BORDER = 3 * 2
+/** Horizontal padding inside the badge. The verdict word must fit between these. */
+export const VERDICT_BADGE_PAD_X = 28
+/** Vertical padding inside the badge. */
+export const VERDICT_BADGE_PAD_Y = 10
+/** The badge's text line box, as a multiple of its font size. */
+export const VERDICT_LINE_BOX = 1.18
+/** The verdict may never be more than this fraction of the largest hook line. */
+export const VERDICT_HOOK_RATIO = 0.7
+/** Below this the verdict stops being readable at 120px, and a verdict nobody can read is not one. */
+export const MIN_VERDICT_FONT = 30
 
-/** Below the lockup's top edge the sticker must not go. The channel mark sits at bottom:36 and is
+/** Below the lockup's top edge the badge must not go. The channel mark sits at bottom:36 and is
  *  52px tall, so it starts at 720-36-52 = 632; back off a little for its glow. */
 export const LOCKUP_TOP = 620
 
-/** Shrinking is a fix only up to a point. A verdict nobody can read at 120px is not a verdict. */
-export const MIN_STICKER_SCALE = 0.62
-
-/** The sticker's rendered height at a given scale. */
-export function stickerHeight(scale: number): number {
-  return scale * (STICKER_LINE_BOX + STICKER_PAD_Y + STICKER_BORDER)
+/** The badge's rendered height at a given font size. */
+export function verdictBadgeHeight(fontSize: number): number {
+  return fontSize * VERDICT_LINE_BOX + 2 * VERDICT_BADGE_PAD_Y
 }
 
-/** The sticker's rendered width at a given scale, for a verdict measured at REF_SIZE. */
-export function stickerWidth(scale: number, verdictWidthAtRef: number): number {
-  return scale * ((verdictWidthAtRef * STICKER_FONT) / REF_SIZE + STICKER_PAD_X + STICKER_BORDER)
+/** The verdict word's rendered width at a given font size, from its width at REF_SIZE. */
+export function verdictTextWidth(fontSize: number, verdictWidthAtRef: number): number {
+  return (verdictWidthAtRef * fontSize) / REF_SIZE
 }
 
 export interface VerdictFit {
-  scale: number
+  fontSize: number
   warning?: string
 }
 
-export interface VerdictBelowHookParams {
+export interface VerdictInBrickParams {
   /** Total height of the rendered hook lines. */
   brickHeight: number
+  /** The largest hook line's font size — the badge is capped relative to it. */
+  maxHookSize: number
   /** The hook column's `top`, resolved to px. */
   hookTop: number
   /** Whether the column is vertically centred on hookTop (translateY(-50%)). */
   translateY: boolean
-  /** The block the sticker is left-aligned to — already clamped inside the 60% line, so fitting the
-   *  sticker within it is what makes the sticker respect that same boundary. */
+  /** The block the badge spans — already clamped inside the 60% line, so spanning it is what makes
+   *  the badge respect that same boundary. */
   blockWidth: number
-  /** Fixed gap between the brick's last line and the sticker. */
+  /** Fixed gap between the brick's last line and the badge (the verdictGap prop). */
   gap: number
-  /** Width of the verdict word measured at REF_SIZE in the sticker's face. */
+  /** Width of the verdict word at REF_SIZE, in the badge's face. */
   verdictWidthAtRef: number
   lockupTop?: number
 }
 
-/** The scale at which the below-hook sticker clears both the lockup and the block's right edge.
- *
- *  Returns 1 (no warning) when it already fits. Otherwise shrinks to the binding constraint and
- *  names it — a sticker that silently shrank is a sticker whose size no longer means anything, and
- *  the host tunes these props expecting the verdict to be a fixed, recognisable stamp. */
-export function fitVerdictBelowHook(p: VerdictBelowHookParams): VerdictFit {
+/** The badge's font size: the smallest of its three bounds, floored at legibility. */
+export function fitVerdictInBrick(p: VerdictInBrickParams): VerdictFit {
   const lockupTop = p.lockupTop ?? LOCKUP_TOP
 
-  // How much vertical room the sticker has. With translateY the whole column (brick + gap + sticker)
-  // is centred on hookTop, so growing the sticker pushes the bottom down only half as fast.
+  const byHook = VERDICT_HOOK_RATIO * p.maxHookSize
+  const byWidth = ((p.blockWidth - 2 * VERDICT_BADGE_PAD_X) / p.verdictWidthAtRef) * REF_SIZE
+
+  // Vertical room. With translateY the whole column (brick + gap + badge) is centred on hookTop, so
+  // growing the badge pushes the bottom down only half as fast.
   const roomBelow = p.translateY
     ? 2 * (lockupTop - p.hookTop) - p.brickHeight - p.gap
     : lockupTop - p.hookTop - p.brickHeight - p.gap
-  const scaleH = roomBelow / stickerHeight(1)
+  const byLockup = (roomBelow - 2 * VERDICT_BADGE_PAD_Y) / VERDICT_LINE_BOX
 
-  // How much horizontal room: the sticker is left-aligned to the block (with a small indent), and
-  // the block's right edge is already the 60% line.
-  const scaleW = (p.blockWidth - VERDICT_INDENT) / stickerWidth(1, p.verdictWidthAtRef)
+  const natural = Math.min(byHook, byWidth, byLockup)
+  if (natural >= byHook) return { fontSize: byHook } // the hook cap is the intended, quiet bound
 
-  const natural = Math.min(scaleH, scaleW, 1)
-  if (natural >= 1) return { scale: 1 }
-
-  const scale = Math.max(natural, MIN_STICKER_SCALE)
-  const pct = Math.round(scale * 100)
+  const fontSize = Math.max(natural, MIN_VERDICT_FONT)
   const reason =
-    scaleH < scaleW
-      ? `the brick is tall enough that the verdict sticker would land on the channel lockup`
-      : `the verdict sticker is wider than the hook block (it must stay inside the 60% line)`
+    byLockup < byWidth
+      ? 'the brick is tall enough that the verdict badge would land on the channel lockup'
+      : 'the verdict word is wider than the block it must sit inside'
   const floored =
-    natural < MIN_STICKER_SCALE
-      ? ` It could not shrink far enough (floor ${Math.round(MIN_STICKER_SCALE * 100)}%) — shorten the hook or reduce blockWidth.`
+    natural < MIN_VERDICT_FONT
+      ? ` It could not shrink far enough (floor ${MIN_VERDICT_FONT}px) — shorten the hook, lower blockWidth, or reduce verdictGap.`
       : ''
-  return { scale, warning: `[ThumbTemplate] ${reason}; shrunk it to ${pct}%.${floored}` }
+  return {
+    fontSize,
+    warning: `[ThumbTemplate] ${reason}; shrunk it to ${Math.round(fontSize)}px.${floored}`,
+  }
 }
-
-/** The sticker's left indent inside the block — a slight step in, so it reads as hanging off the
- *  brick rather than as another line of it. */
-export const VERDICT_INDENT = 8
 
 export interface ClampedBlock {
   blockWidth: number

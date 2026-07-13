@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fitLinesToBlock, clampBlockWidth, fitVerdictBelowHook, stickerHeight, stickerWidth, MIN_STICKER_SCALE, TEXT_ZONE_FRACTION, REF_SIZE } from './hook-block'
+import { fitLinesToBlock, clampBlockWidth, fitVerdictInBrick, verdictBadgeHeight, verdictTextWidth, VERDICT_BADGE_PAD_X, MIN_VERDICT_FONT, TEXT_ZONE_FRACTION, REF_SIZE } from './hook-block'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The brick: every hook line is scaled so its RENDERED width equals the block
@@ -123,78 +123,83 @@ describe('clampBlockWidth — the brick can never cross the 60% line', () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The verdict sticker, anchored below the brick.
+// The verdict as the brick's LAST LINE (verdictPosition: 'in-brick').
 //
-// Two things can go wrong when the sticker hangs off the bottom of the hook, and both are
-// geometry, not taste: it can run past the 60% line into the object's zone, and it can drop onto
-// the channel lockup in the bottom-left. A tall brick (many lines, or a big blockWidth) makes the
-// second one certain. So the sticker gets ONE scale factor that satisfies both constraints, and
-// the host is told whenever it had to shrink — a sticker that silently shrank is a sticker whose
-// size no longer means anything.
+// A flat badge spanning the full block width, so the block ends on a hard horizontal edge. Its
+// font is bounded three ways and takes the smallest: it may not out-shout the hook (a cap relative
+// to the largest hook line), its text must fit inside the block, and the badge must not drop onto
+// the channel lockup. Same construction-over-arithmetic anchoring as before — the badge is a child
+// of the hook column — so only the SIZE is computed here.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STICKER = {
+const BRICK = {
   hookTop: 360,
   translateY: true,
   blockWidth: 563,
   gap: 24,
   lockupTop: 620,
-  // "ГОДНОТА" measured at REF_SIZE in the sticker's face
-  verdictWidthAtRef: 430,
+  verdictWidthAtRef: 430, // "ГОДНОТА" at REF_SIZE
+  maxHookSize: 160,
+  brickHeight: 240,
 }
 
-describe('fitVerdictBelowHook — the sticker clears both the 60% line and the channel lockup', () => {
-  it('leaves the sticker at full size when the brick is short enough', () => {
-    const r = fitVerdictBelowHook({ ...STICKER, brickHeight: 200 })
-    expect(r.scale).toBe(1)
-    expect(r.warning).toBeUndefined()
+describe('fitVerdictInBrick — the badge is the block’s last row, and never out-shouts the hook', () => {
+  it('caps the badge at 0.7x the largest hook line', () => {
+    // Width and height are both generous here, so the hook-relative cap is what binds.
+    const r = fitVerdictInBrick({ ...BRICK })
+    expect(r.fontSize).toBeCloseTo(0.7 * BRICK.maxHookSize)
   })
 
-  it('shrinks the sticker — and says so — when a tall brick would push it onto the lockup', () => {
-    const r = fitVerdictBelowHook({ ...STICKER, brickHeight: 400 })
-    expect(r.scale).toBeLessThan(1)
+  it('never lets the badge grow past the hook, however small the hook gets', () => {
+    const r = fitVerdictInBrick({ ...BRICK, maxHookSize: 40 })
+    expect(r.fontSize).toBeLessThanOrEqual(0.7 * 40 + 0.01)
+  })
+
+  it('shrinks the badge text to fit INSIDE the block — the badge spans it, the word must not', () => {
+    // A wide verdict word in a narrow block: the width bound is the binding one, and there is still
+    // room above the legibility floor to satisfy it.
+    const r = fitVerdictInBrick({ ...BRICK, blockWidth: 400, verdictWidthAtRef: 800 })
+    expect(verdictTextWidth(r.fontSize, 800)).toBeLessThanOrEqual(400 - 2 * VERDICT_BADGE_PAD_X + 0.01)
+    expect(r.warning).toMatch(/wider than the block/i)
+  })
+
+  it('warns rather than lie when the word cannot fit even at the legibility floor', () => {
+    // The honest failure: below MIN_VERDICT_FONT the verdict stops being readable at 120px, so the
+    // code stops shrinking. It will overflow — and the only useful thing it can do is say so.
+    const r = fitVerdictInBrick({ ...BRICK, blockWidth: 260, verdictWidthAtRef: 800 })
+    expect(r.fontSize).toBe(MIN_VERDICT_FONT)
+    expect(verdictTextWidth(r.fontSize, 800)).toBeGreaterThan(260 - 2 * VERDICT_BADGE_PAD_X)
+    expect(r.warning).toMatch(/could not shrink far enough/i)
+  })
+
+  it('shrinks — and warns — when a tall brick would drop the badge onto the channel lockup', () => {
+    const r = fitVerdictInBrick({ ...BRICK, brickHeight: 420 })
+    expect(r.fontSize).toBeLessThan(0.7 * BRICK.maxHookSize)
     expect(r.warning).toMatch(/lockup|channel/i)
   })
 
-  it('keeps the shrunk sticker clear of the lockup — the point is that it FITS, not that it warned', () => {
-    // 400px of brick still leaves room to shrink INTO. (A brick so tall that even the floor scale
-    // cannot clear the lockup is a different outcome — see the floor test below, which asserts the
-    // sticker stays legible and the host gets told, rather than the sticker vanishing.)
-    const brickHeight = 400
-    const r = fitVerdictBelowHook({ ...STICKER, brickHeight })
-    expect(r.scale).toBeGreaterThan(MIN_STICKER_SCALE) // shrunk, but not against the floor
-    const content = brickHeight + STICKER.gap + stickerHeight(r.scale)
-    const bottom = STICKER.hookTop - content / 2 + content // translateY: centre the whole column
-    expect(bottom).toBeLessThanOrEqual(STICKER.lockupTop + 0.01)
+  it('keeps the shrunk badge clear of the lockup — it must FIT, not merely warn', () => {
+    const brickHeight = 420
+    const r = fitVerdictInBrick({ ...BRICK, brickHeight })
+    const content = brickHeight + BRICK.gap + verdictBadgeHeight(r.fontSize)
+    const bottom = BRICK.hookTop - content / 2 + content // translateY centres the whole column
+    expect(bottom).toBeLessThanOrEqual(BRICK.lockupTop + 0.01)
   })
 
-  it('honours the un-centred layouts too (translateY false anchors the top)', () => {
+  it('honours an un-centred layout (translateY false anchors the top)', () => {
     const brickHeight = 300
-    const r = fitVerdictBelowHook({ ...STICKER, translateY: false, hookTop: 168, brickHeight })
-    const bottom = 168 + brickHeight + STICKER.gap + stickerHeight(r.scale)
-    expect(bottom).toBeLessThanOrEqual(STICKER.lockupTop + 0.01)
+    const r = fitVerdictInBrick({ ...BRICK, translateY: false, hookTop: 168, brickHeight })
+    const bottom = 168 + brickHeight + BRICK.gap + verdictBadgeHeight(r.fontSize)
+    expect(bottom).toBeLessThanOrEqual(BRICK.lockupTop + 0.01)
   })
 
-  it('shrinks a sticker whose WIDTH would cross the block edge — the 60% clamp binds it too', () => {
-    // A very wide verdict word in a narrow block: width, not height, is what limits it here.
-    const r = fitVerdictBelowHook({ ...STICKER, brickHeight: 150, blockWidth: 300, verdictWidthAtRef: 430 })
-    expect(r.scale).toBeLessThan(1)
-    expect(stickerWidth(r.scale, 430)).toBeLessThanOrEqual(300)
-    expect(r.warning).toMatch(/width|block/i)
-  })
-
-  it('never shrinks past the floor — an illegible sticker is not a fix', () => {
-    const r = fitVerdictBelowHook({ ...STICKER, brickHeight: 900 })
-    expect(r.scale).toBeGreaterThanOrEqual(MIN_STICKER_SCALE)
-    expect(r.warning).toBeDefined()
-  })
-
-  it('admits it when even the floor cannot clear the lockup, instead of pretending it fits', () => {
-    // The honest failure. Shrinking has a floor, so past a certain brick height the sticker WILL
-    // overlap — and the only useful thing the code can do is stop shrinking and say what to change.
-    const r = fitVerdictBelowHook({ ...STICKER, brickHeight: 460 })
-    expect(r.scale).toBe(MIN_STICKER_SCALE)
+  it('will not shrink into illegibility — it stops at the floor and says what to change', () => {
+    const r = fitVerdictInBrick({ ...BRICK, brickHeight: 900 })
+    expect(r.fontSize).toBe(MIN_VERDICT_FONT)
     expect(r.warning).toMatch(/could not shrink far enough/i)
-    expect(r.warning).toMatch(/shorten the hook|blockWidth/i)
+  })
+
+  it('does not warn when nothing had to give', () => {
+    expect(fitVerdictInBrick({ ...BRICK }).warning).toBeUndefined()
   })
 })

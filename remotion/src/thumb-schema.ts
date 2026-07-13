@@ -80,10 +80,15 @@ export const thumbSchema = z.object({
   logo: thumbLogoSchema,
   // layout controls logo size + centre + hook vertical
   layout: z.enum(['logo-right', 'logo-hero', 'logo-spot']).optional(),
-  // 'below-hook' anchors the sticker under the brick's last line, left-aligned to the block with a
-  // slight indent — it reads as hanging off the hook. It inherits the block's 60% clamp, and shrinks
-  // itself if a tall brick would drop it onto the channel lockup. The absolute positions remain.
-  verdictPosition: z.enum(['below-hook', 'top-right', 'mid-left', 'top-left']).optional(),
+  // 'in-brick' renders the verdict as the block's LAST ROW: a flat badge spanning the block width,
+  // so the lockup closes on a hard horizontal edge. Flat by design — the 3D bevelled-and-tilted
+  // sticker reads as a foreign object inside a flat typographic block. It inherits the block's 60%
+  // clamp (it spans the block), is capped at 0.7× the largest hook line so it cannot out-shout the
+  // hook, and shrinks itself if a tall brick would drop it onto the channel lockup.
+  // The three absolute positions keep the dimensional sticker, for non-brick layouts.
+  verdictPosition: z.enum(['in-brick', 'top-right', 'mid-left', 'top-left']).optional(),
+  // Gap between the brick's last hook line and an in-brick verdict badge.
+  verdictGap: z.number().min(0).max(120).optional(),
   // NEW — multiply the layout's logo width (0.4–2×); tune the focal size live
   logoScale: z.number().min(0.4).max(2).optional(),
   accent: zColor().optional(),

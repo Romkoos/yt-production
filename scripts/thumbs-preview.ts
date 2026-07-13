@@ -63,6 +63,15 @@ function main(): void {
   // Say it BEFORE the renders, not after: the sheet is what the host looks at, and a clamped block
   // renders perfectly happily — just not at the width they typed. Remotion eats the component's own
   // console.warn on the `still` path, so this is the only place the message can actually land.
+  //
+  // TODO(cli-warnings): ThumbTemplate ALSO warns when the in-brick verdict badge has to shrink to
+  // clear the channel lockup (fitVerdictInBrick), and that warning cannot be reproduced here: it
+  // depends on the brick's measured glyph widths, and Node has no canvas. Surfacing it means moving
+  // this script off the `npx remotion still` CLI and onto @remotion/renderer's renderStill(), which
+  // takes an onBrowserLog callback and would forward the component's console.warn to this terminal.
+  // DEFERRED ON PURPOSE: the shrink has never fired — the tightest ep001 variant clears the lockup
+  // by +131px — and building the plumbing for a warning nobody has needed yet is speculative. Do it
+  // the first time a real render actually shrinks a badge.
   for (const w of [...blockWidthWarnings(variants), ...sceneObjectWarnings(variants)]) {
     process.stdout.write(`  ! ${w}\n`)
   }

@@ -3,7 +3,15 @@ import { AbsoluteFill, Img, staticFile, delayRender, continueRender, cancelRende
 import { loadFonts, FONT_FAMILY, HOOK_FONT_FAMILY, HOOK_FONT_WEIGHT } from './loadFonts'
 import { ChannelLogo } from './ChannelLogo'
 import { BG, DEFAULT_BRANDING, verdictStyle } from './theme'
-import { fitLinesToBlock, clampBlockWidth, fitVerdictBelowHook, VERDICT_INDENT, REF_SIZE } from './hook-block'
+import {
+  fitLinesToBlock,
+  clampBlockWidth,
+  fitVerdictInBrick,
+  VERDICT_BADGE_PAD_X,
+  VERDICT_BADGE_PAD_Y,
+  VERDICT_LINE_BOX,
+  REF_SIZE,
+} from './hook-block'
 import type { HookFont, HookLine, TermTone, ThumbLayout, ThumbLogo, ThumbTemplateProps, VerdictPosition } from './thumb-schema'
 
 // Prop types + the Zod schema live in ./thumb-schema (the single source of truth used both here
@@ -49,7 +57,7 @@ const DEFAULT_BLOCK_WIDTH = Math.round(CANVAS.w * 0.44) // 563px
 const DEFAULT_LINE_SCALE_RATIO = 2
 const BLOCK_TRACKING = -0.02 // em — uppercase wants tighter tracking to read as one mass
 const BLOCK_LINE_HEIGHT = 0.95 // near-zero leading: the lines are meant to touch
-const VERDICT_GAP = 24 // fixed gap between the brick's last line and a below-hook sticker
+const DEFAULT_VERDICT_GAP = 24 // gap between the brick's last hook line and an in-brick badge
 
 /** What we DRAW is what we must MEASURE. Uppercasing via CSS `text-transform` would change the
  *  rendered width without changing the string measureText sees, and every line would justify to
@@ -203,41 +211,66 @@ const LogoTile: React.FC<{ logo: ThumbLogo; size: number; glow: string; accent: 
 }
 
 // ── Layer 3: verdict sticker — layered plate, angle, gloss, texture (kept) ─────
-// The PLATE is the sticker's look, independent of where it lands. `below-hook` renders it inline in
-// the hook column; the absolute positions wrap it. `scale` exists for below-hook, where a tall brick
-// can force the sticker to shrink to clear the channel lockup — every dimension scales together, so
-// it shrinks as one object rather than turning into differently-proportioned furniture.
-const VerdictPlate: React.FC<{ verdict: string; scale?: number }> = ({ verdict, scale = 1 }) => {
+// The FLAT badge — the brick's last row. No bevel, no gloss, no tilt, no drop shadow: inside a flat
+// typographic block, the dimensional sticker reads as a foreign object glued on. This is just
+// another row of the same lockup, spanning the block so the block closes on a hard horizontal edge.
+const VerdictBadge: React.FC<{ verdict: string; fontSize: number; width: number }> = ({ verdict, fontSize, width }) => {
   const v = verdictStyle(verdict)
-  const radius = 20 * scale
+  return (
+    <div
+      style={{
+        width,
+        background: v.bg, // flat fill — no gradient
+        color: v.fg,
+        fontFamily: FONT_FAMILY,
+        fontSize,
+        fontWeight: 700,
+        letterSpacing: 1,
+        lineHeight: VERDICT_LINE_BOX,
+        padding: `${VERDICT_BADGE_PAD_Y}px ${VERDICT_BADGE_PAD_X}px`,
+        borderRadius: 10, // slightly rounded, not a pill
+        textAlign: 'center',
+        whiteSpace: 'nowrap',
+        boxSizing: 'border-box',
+      }}
+    >
+      {verdict}
+    </div>
+  )
+}
+
+// The dimensional sticker — kept for the absolute positions, where there is no flat block to belong
+// to and its depth reads as intentional.
+const VerdictPlate: React.FC<{ verdict: string }> = ({ verdict }) => {
+  const v = verdictStyle(verdict)
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ position: 'absolute', inset: 0, transform: `translate(${10 * scale}px, ${12 * scale}px)`, background: 'rgba(0,0,0,0.45)', borderRadius: radius, filter: 'blur(2px)' }} />
+      <div style={{ position: 'absolute', inset: 0, transform: 'translate(10px, 12px)', background: 'rgba(0,0,0,0.45)', borderRadius: 20, filter: 'blur(2px)' }} />
       <div
         style={{
           position: 'relative',
           background: `linear-gradient(160deg, ${v.bg} 0%, ${shade(v.bg, -0.18)} 100%)`,
           color: v.fg,
           fontFamily: FONT_FAMILY,
-          fontSize: 78 * scale,
+          fontSize: 78,
           fontWeight: 700,
-          letterSpacing: 1 * scale,
-          padding: `${14 * scale}px ${42 * scale}px ${18 * scale}px`,
-          borderRadius: radius,
-          border: `${3 * scale}px solid ${shade(v.bg, -0.3)}`,
-          boxShadow: `inset 0 ${3 * scale}px 0 ${shade(v.bg, 0.35)}, inset 0 ${-6 * scale}px ${14 * scale}px ${shade(v.bg, -0.3)}, 0 ${16 * scale}px ${40 * scale}px rgba(0,0,0,0.4)`,
+          letterSpacing: 1,
+          padding: '14px 42px 18px',
+          borderRadius: 20,
+          border: `3px solid ${shade(v.bg, -0.3)}`,
+          boxShadow: `inset 0 3px 0 ${shade(v.bg, 0.35)}, inset 0 -6px 14px ${shade(v.bg, -0.3)}, 0 16px 40px rgba(0,0,0,0.4)`,
           whiteSpace: 'nowrap',
         }}
       >
-        <div style={{ position: 'absolute', inset: 0, borderRadius: radius, background: 'linear-gradient(120deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 42%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, borderRadius: 20, background: 'linear-gradient(120deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 42%)', pointerEvents: 'none' }} />
         {verdict}
       </div>
     </div>
   )
 }
 
-/** The three absolute positions. `below-hook` is NOT one of them — it lives in the hook column. */
-const VerdictSticker: React.FC<{ verdict: string; position: Exclude<VerdictPosition, 'below-hook'> }> = ({ verdict, position }) => {
+/** The three absolute positions. `in-brick` is NOT one of them — it lives in the hook column. */
+const VerdictSticker: React.FC<{ verdict: string; position: Exclude<VerdictPosition, 'in-brick'> }> = ({ verdict, position }) => {
   const place: React.CSSProperties =
     position === 'mid-left'
       ? { left: PAD - 6, top: '50%', transform: 'translateY(-50%) rotate(-4deg)' }
@@ -281,6 +314,7 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
   hookUppercase = true,
   hookFont = 'unbounded',
   objectInScene = false,
+  verdictGap = DEFAULT_VERDICT_GAP,
 }) => {
   loadFonts()
   const acc = accent ?? branding.accent
@@ -298,11 +332,11 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
   if (block.warning) console.warn(block.warning)
 
   const blockLines = useMemo(() => hook.map((l) => blockText(l.text, hookUppercase)), [hook, hookUppercase])
-  const belowHook = verdictPosition === 'below-hook'
+  const inBrick = verdictPosition === 'in-brick'
 
-  // Measurement is needed for the brick's sizes AND for the below-hook sticker's fit (which depends
-  // on the brick's height, hence on those same sizes).
-  const metrics = useHookMetrics(blockLines, hookFamily, hookWeight, verdict, hookBlock || belowHook)
+  // Measurement is needed for the brick's sizes AND for the in-brick badge's fit (which depends on
+  // the brick's height and its largest line, hence on those same sizes).
+  const metrics = useHookMetrics(blockLines, hookFamily, hookWeight, verdict, hookBlock || inBrick)
   const blockSizes = useMemo(
     () =>
       hookBlock && metrics
@@ -316,13 +350,14 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
   const brickHeight = lineSizes.reduce((sum, s) => sum + s * (hookBlock ? BLOCK_LINE_HEIGHT : 1.0), 0)
 
   const verdictFit =
-    belowHook && metrics
-      ? fitVerdictBelowHook({
+    inBrick && metrics
+      ? fitVerdictInBrick({
           brickHeight,
+          maxHookSize: Math.max(...lineSizes),
           hookTop: resolveHookTop(cfg.hookTop),
           translateY: cfg.hookTranslateY,
           blockWidth: block.blockWidth,
-          gap: VERDICT_GAP,
+          gap: verdictGap,
           verdictWidthAtRef: metrics.verdictWidth,
         })
       : null
@@ -467,27 +502,22 @@ export const ThumbTemplate: React.FC<ThumbTemplateProps> = ({
           )
         })}
 
-        {/* text (2) — the verdict, hanging off the brick. Being a CHILD of the hook column is what
-            anchors it: it sits under the last line by construction, left-aligned to the block (plus a
-            slight indent so it reads as a separate stamp), and it inherits the block's 60% clamp
-            because it can only be as wide as the block it lives in. */}
-        {belowHook ? (
-          <div
-            style={{
-              alignSelf: 'flex-start',
-              marginLeft: VERDICT_INDENT,
-              marginTop: VERDICT_GAP,
-              transform: 'rotate(-4deg)',
-              transformOrigin: 'left center',
-            }}
-          >
-            <VerdictPlate verdict={verdict} scale={verdictFit?.scale ?? 1} />
+        {/* text (2) — the verdict, as the block's LAST ROW. Being a CHILD of the hook column is what
+            anchors it: it sits under the last line by construction, spans the block, and inherits the
+            block's 60% clamp because it can only be as wide as the block it lives in. */}
+        {inBrick ? (
+          <div style={{ marginTop: verdictGap }}>
+            <VerdictBadge
+              verdict={verdict}
+              width={block.blockWidth}
+              fontSize={verdictFit?.fontSize ?? Math.max(...lineSizes) * 0.7}
+            />
           </div>
         ) : null}
       </div>
 
       {/* the absolute verdict positions (out of the bottom-right timestamp zone) */}
-      {belowHook ? null : <VerdictSticker verdict={verdict} position={verdictPosition} />}
+      {inBrick ? null : <VerdictSticker verdict={verdict} position={verdictPosition} />}
 
       {/* channel lockup, bottom-left (branding decoration) — our mark + wordmark.
           NOTE: the top-left `>_` box is the REPO identity slot, left untouched. */}
