@@ -1,9 +1,9 @@
 # /assets
 
 Render the episode's Remotion scenes (StarChart with REAL star data, Intro, VerdictCard) and 3
-thumbnail variants, and generate the host's pre-record prep docs (SHOTLIST.md, MEME_LIST.md),
-then advance `STATE.md` to `assets: done` and record phase metrics. This is the last automated
-step before the manual record/edit phase.
+thumbnail variants, and generate the host's session-oriented prep docs (RECORDING.md, VOICE.md,
+MEME_LIST.md), then advance `STATE.md` to `assets: done` and record phase metrics. This is the
+last automated step before the manual record/edit phase.
 
 **Usage:** `/assets [--episode <id>]`
 
@@ -107,18 +107,31 @@ carry a fabricated brand mark — see `/gen-thumb-object` for the per-mode guara
 pnpm prep -- --episode <ep>
 ```
 
-This writes `episodes/<ep>/SHOTLIST.md` (every `[СКРИНКАСТ]` cue, numbered checkboxes by beat —
-the host's Screen Studio checklist) and scaffolds `episodes/<ep>/assets/MEME_LIST.md` (every
-`[МЕМ]` cue + a free stock-sound list). Then **fill each MEME_LIST scaffold** (`**Мем:**` /
-`**Источник:**`) with a concrete meme suggestion and a real download link — suggestions + links
-only, never auto-download copyrighted memes.
+This writes the two **session-oriented** docs — one file drives one sitting:
 
-SHOTLIST item N links to `REPRO.md#scene-N` — the quick checklist points at the reproduction
-protocol's matching SCENE block (exact commands, what appears on screen, WAIT/CUT, reset). This
-1:1 mapping holds because both are numbered from the same ordered `[СКРИНКАСТ]` cue list;
-`REPRO.md` (from `/review-repo` + `/script`) should already exist, so the links resolve. **Note:**
-re-running `pnpm prep` rewrites `MEME_LIST.md` from scratch — if you regenerate SHOTLIST
-after the host filled MEME_LIST, restore MEME_LIST (`git checkout -- …/MEME_LIST.md`).
+- `episodes/<ep>/RECORDING.md` — the **screencast session**. A checkbox per `[СКРИНКАСТ #N]` cue,
+  grouped by beat, with REPRO's exact commands / on-screen / WAIT-CUT / reset **inlined**, plus a
+  back-reference to the voice beat the scene plays under (`Звучит под: «…»` — the tail of the
+  preceding voice run, i.e. what the host hears as the scene cuts in). Pre-flight (prepared states)
+  at the top, failure recipes verbatim at the bottom. **No cross-file jump is needed mid-session** —
+  `REPRO.md` stays the source of truth; `RECORDING.md` is disposable.
+- `episodes/<ep>/VOICE.md` — the **voice session**. `[ГОЛОС]` lines only, in reading order, cues
+  stripped, with a margin note per block naming the IDs it covers (`→ #3 · M2`). The Хук and
+  Вердикт blocks are marked 🎯 НАИЗУСТЬ (learn verbatim).
+- `episodes/<ep>/assets/MEME_LIST.md` — every `[МЕМ M<n>]` cue + a free stock-sound list.
+  **Scaffolded only if missing** — a re-run never clobbers the host's filled-in suggestions. Then
+  **fill each scaffold** (`**Мем:**` / `**Источник:**`) with a concrete meme and a real download
+  link — suggestions + links only, never auto-download copyrighted memes.
+
+`pnpm prep` **hard-fails and writes nothing** if `script.md` and `REPRO.md` disagree (a `#N` with
+no `#scene-N` block, or an orphan block with no cue) — the IDs are the contract between them. An
+episode written before the ID scheme (ep001) is detected as legacy: `pnpm prep` skips it with a
+message and exits 0.
+
+Re-running is safe: RECORDING/VOICE are regenerated, and ticked scene boxes are carried over **by
+scene ID**. A box whose scene content changed since it was ticked is **reset** and marked `⟳` (and
+announced on stdout); a tick whose scene no longer exists is dropped and printed as a `⚠` warning —
+never silently remapped. `--force` discards all tick state.
 
 ---
 
@@ -131,8 +144,8 @@ after the host filled MEME_LIST, restore MEME_LIST (`git checkout -- …/MEME_LI
   ```
   Manual phase — подготовка к записи:
   - [ ] Музыка: сгенерировать трек в Suno
-  - [ ] Голос: записать озвучку по script.md
-  - [ ] Скринкаст: снять по SHOTLIST.md → REPRO.md (точные команды/что на экране/WAIT-CUT)
+  - [ ] Голос: записать озвучку по VOICE.md (хук и вердикт — наизусть)
+  - [ ] Скринкаст: снять по RECORDING.md (команды/что на экране/WAIT-CUT — всё внутри)
   - [ ] Проверка REPRO.md: пройти SETUP с нуля, свериться с prepared states
   - [ ] Мемы и звуки: скачать по assets/MEME_LIST.md
   - [ ] Монтаж в DaVinci Resolve
@@ -159,11 +172,11 @@ Writes **only**:
   `thumb-variants.json` (tracked render source), the gitignored `star-history.raw.json` /
   `StarChart.props.json` cache, and `preview/` (the gitignored thumbnail contact sheet:
   `thumb-vN.png`, `thumb-vN.120.png`, `index.html`).
-- `episodes/<ep>/SHOTLIST.md` — new file.
+- `episodes/<ep>/RECORDING.md` and `episodes/<ep>/VOICE.md` — new files (derived, regenerable).
 - `episodes/<ep>/STATE.md` — updated in place (assets phase fields only).
 - `db/tracker.sqlite` — one new `phaseMetrics` row.
 
 Rendered media (`*.mp4`, `*.png`, `*.json`) is gitignored — EXCEPT `thumb-variants.json`, which is
 tracked (it is the editable source for the thumbnail loop, not a render output); text prep docs
-(`MEME_LIST.md`, `SHOTLIST.md`) are tracked. The only network access is the star-history fetch
-(read-only GitHub API); no third-party repo code is executed.
+(`MEME_LIST.md`, `RECORDING.md`, `VOICE.md`) are tracked. The only network access is the
+star-history fetch (read-only GitHub API); no third-party repo code is executed.

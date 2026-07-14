@@ -37,6 +37,22 @@ Every long-form script follows this shape:
 4. **Где README врёт** — the discrepancies between the promise and reality.
 5. **Вердикт** — the call, on the fixed scale below (VerdictCard animation here).
 
+### Cue IDs (cross-document contract)
+
+`script.md` is the **single source of cue identity**. `/script` numbers each cue kind
+sequentially from 1, in narrative order, and every derived doc reads its numbering from there:
+
+| Tag | Form | Derived into |
+|-----|------|--------------|
+| `[СКРИНКАСТ #N: …]` | `#1, #2…` | `REPRO.md`'s `<a id="scene-N">`, `RECORDING.md`'s checkboxes |
+| `[АНИМАЦИЯ A<n>: …]` | `A1, A2…` | the edit; `VOICE.md` margin notes |
+| `[МЕМ M<n>: …]` | `M1, M2…` | `assets/MEME_LIST.md` headers |
+| `[SHORT cut S<n>: …]` | `S1, S2…` | `/cut-shorts` (post-edit) |
+
+`[ГОЛОС]` takes no ID. `pnpm prep` hard-fails (writing nothing) on a missing ID, a gap or
+duplicate, or a `#N` ↔ `#scene-N` mismatch in **either** direction. Episodes written before this
+scheme (ep001) are detected as legacy: `pnpm prep` skips them with a message and **exits 0**.
+
 ## Verdict scale (FIXED — do not invent new labels)
 
 - **ГОДНОТА** — genuinely good; delivers on its claims.
@@ -64,6 +80,14 @@ Each phase is an independently runnable command. State lives in the episode's `S
 **Transitions:** scout → review → script → assets → **manual** → publish → retro. The
 `manual` phase is the human one (record voice, record screencast in Screen Studio, edit in
 DaVinci Resolve). The pipeline waits there.
+
+**Manual-phase docs — one file drives one sitting.** `/assets` generates `RECORDING.md` (the
+screencast session: a checkbox per scene, commands inline, plus the voice beat each scene plays
+under) and `VOICE.md` (the voice session: `[ГОЛОС]` only, in reading order, hook + verdict marked
+learn-verbatim). Both are **derived and regenerable** — `script.md` and `REPRO.md` are the sources
+of truth. Re-running `pnpm prep` carries the host's ticked boxes over by scene ID; a scene whose
+content changed since it was ticked is reset and flagged. (`SHOTLIST.md` is gone — `RECORDING.md`
+supersedes it.)
 
 ### STATE.md contract
 
