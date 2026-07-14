@@ -69,9 +69,12 @@ immediately **before** it and the run immediately **after** it.
 
 One function computes this association; both docs read it, in opposite directions:
 
-- **`RECORDING.md`**, per scene — *«Звучит под: …»* (first ~10 words of the preceding run's last
-  line) and *«Дальше: …»* (the following run). The host knows the scene's job without opening
-  `script.md`.
+- **`RECORDING.md`**, per scene — *«Звучит под: …»* and *«Дальше: …»*. The host knows the scene's
+  job without opening `script.md`.
+  - *«Звучит под»* quotes the **tail** of the preceding voice run — its final sentence / last
+    words. The semantic is **"what the host hears right before this scene cuts in"**, so the tail
+    is the correct end of the run, not its opening words.
+  - *«Дальше»* quotes the **head** of the following voice run — what the scene plays into.
 - **`VOICE.md`**, per voice block — a margin note listing the IDs adjacent to that block
   (`→ #3 · M2 · S1`). The reader sees text; the future editor sees the footage mapping.
 
@@ -196,5 +199,7 @@ change exists to fix.
 2. `pnpm prep -- --episode 2026-07-ep002` regenerates docs whose IDs match 1:1 across
    `script.md` ↔ `REPRO.md` ↔ `RECORDING.md` ↔ `VOICE.md`.
 3. `pnpm prep -- --episode 2026-07-ep001` prints the legacy message and exits 0.
-4. A deliberate desync (delete a REPRO scene block) makes `pnpm prep` fail loudly with a non-zero
-   exit and writes nothing.
+4. A deliberate desync fails loudly (non-zero exit, nothing written) in **both** directions the
+   validation claims to cover:
+   a. a `#N` in `script.md` whose REPRO scene block was deleted → fail;
+   b. an orphan REPRO scene block with no matching `#N` in `script.md` → fail.
