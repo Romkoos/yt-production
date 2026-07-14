@@ -73,23 +73,32 @@ Use `report.md`'s "Моменты для видео" entries as the primary sour
 video moment from the report should surface as a screencast cue somewhere in the
 script.
 
-**Tags — use exactly these, exactly as written:**
+**Tags — use exactly these, exactly as written.**
 
-- `[ГОЛОС]` — a voiceover line. Plain narration the host will read/record.
-- `[СКРИНКАСТ: <what to show>]` — a SEMANTIC shooting instruction for the host.
-  Describe the *action* to film (e.g. `[СКРИНКАСТ: run `npm start` on a fresh
-  clone, let the crash happen on screen]`) — this is "clock (b)": the screencast
-  is recorded later, during the manual phase. It is never a reference to an
-  existing recording, and never a timecode.
-- `[АНИМАЦИЯ: ...]` — a Remotion scene cue (e.g. `[АНИМАЦИЯ: StarChart — рост
-  звёзд]`, `[АНИМАЦИЯ: VerdictCard — {{VERDICT}}]`).
-- `[МЕМ: ...]` — a meme cue (what meme/reaction image and why it fits the beat).
-- `[SHORT cut: <narrative beat>]` — marks a narrative beat that would make a good
-  standalone Short. This is a CANDIDATE only — "clock (c)": the real final-video
-  timecodes get reconciled later, after the Resolve edit, and only `/cut-shorts`
-  consumes those reconciled timecodes. Never write an actual timecode here —
-  describe the beat itself (e.g. `[SHORT cut: the fresh-clone crash and the
-  host's reaction]`), not when it occurs.
+**Cue IDs — assign them as you write.** `script.md` is the SINGLE source of cue
+identity; every other doc (REPRO's `#scene-N` anchors, `RECORDING.md`, `VOICE.md`,
+`MEME_LIST.md`) derives its numbering from here. Number each kind sequentially from
+1, in narrative (document) order:
+
+- `[ГОЛОС]` — a voiceover line. Plain narration the host will read/record. **No ID.**
+- `[СКРИНКАСТ #N: <what to show>]` — a SEMANTIC shooting instruction for the host
+  (`#1, #2, #3…`). Describe the *action* to film (e.g. `[СКРИНКАСТ #4: run `npm
+  start` on a fresh clone, let the crash happen on screen]`) — this is "clock (b)":
+  the screencast is recorded later, during the manual phase. It is never a reference
+  to an existing recording, and never a timecode.
+- `[АНИМАЦИЯ A<n>: ...]` — a Remotion scene cue (`A1, A2…`), e.g. `[АНИМАЦИЯ A1:
+  StarChart — рост звёзд]`, `[АНИМАЦИЯ A2: VerdictCard — {{VERDICT}}]`.
+- `[МЕМ M<n>: ...]` — a meme cue (`M1, M2…`): what meme/reaction image and why it
+  fits the beat.
+- `[SHORT cut S<n>: <narrative beat>]` — marks a narrative beat that would make a
+  good standalone Short (`S1, S2…`). This is a CANDIDATE only — "clock (c)": the
+  real final-video timecodes get reconciled later, after the Resolve edit, and only
+  `/cut-shorts` consumes those reconciled timecodes. Never write an actual timecode
+  here — describe the beat itself (e.g. `[SHORT cut S1: the fresh-clone crash and
+  the host's reaction]`), not when it occurs.
+
+No gaps, no duplicates, no out-of-order numbers — `pnpm prep` hard-fails on all
+three, and writes nothing.
 
 **Forbidden in this file:** do not write any clock-style timestamp notation (the
 pattern of two digits, a colon, then two digits, e.g. minutes-colon-seconds) for
@@ -105,11 +114,11 @@ film*, never *when* — timing for both is resolved in later phases, not here.
 `## SETUP`, and `## Failure recipes`. Now fill the two parts that need the script — so
 the host can **record every scene without understanding the repo internals**:
 
-- **`## Scenes`** — write **one block per `[СКРИНКАСТ]` cue** in `script.md`, in shooting
-  order. The block for cue N carries the anchor `<a id="scene-N"></a>` — `SHOTLIST.md`
-  item N links to `#scene-N`, so keep the **count and order identical** to the
-  `[СКРИНКАСТ]` cues or the numbering desyncs. Fill each block from `report.md` + the
-  sandbox:
+- **`## Scenes`** — write **one block per `[СКРИНКАСТ #N]` cue** in `script.md`, in
+  shooting order. The block for cue `#N` carries the anchor `<a id="scene-N"></a>` —
+  **the N comes from the script's tag, not from the block's position in the file.**
+  `pnpm prep` validates both directions and refuses to generate anything if a `#N` has
+  no block, or a block has no `#N`. Fill each block from `report.md` + the sandbox:
   - **Do:** the commands / clicks to perform, verbatim.
   - **On screen:** what will appear, so the host knows it worked.
   - **Wait/Cut:** perf/timing notes (`build takes ~90s — start recording after`), or `—`.

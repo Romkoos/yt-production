@@ -10,8 +10,12 @@
      Ownership:
        /review-repo  writes  ## Prepared states, ## SETUP, ## Failure recipes
                      (from sandbox + report.md — before script.md exists).
-       /script       fills   ## Scenes (one block per [СКРИНКАСТ] cue, in shooting
+       /script       fills   ## Scenes (one block per [СКРИНКАСТ #N] cue, in shooting
                      order) and the **Recording time budget** line.
+
+     RECORDING.md (the host's screencast-session doc) is ASSEMBLED from the scene
+     blocks + prepared states + failure recipes below — write them for someone who
+     will not open this file mid-session. This file stays the source of truth.
 
      Honesty: every command/duration/success-indicator here must be what ACTUALLY
      happened in the sandbox (report.md), not the README's version. Clock (b): scene
@@ -48,10 +52,11 @@
 
 ---
 
-## Scenes  <!-- one block per [СКРИНКАСТ] cue, in shooting order; SHOTLIST item N → #scene-N -->
+## Scenes  <!-- one block per [СКРИНКАСТ #N] cue; the anchor's N IS the script's N -->
 
-<!-- /script fills these. Keep the count and order identical to the [СКРИНКАСТ] cues in
-     script.md so SHOTLIST's numbered items line up with #scene-N anchors. -->
+<!-- /script fills these. The anchor <a id="scene-N"></a> takes its N from the script's
+     [СКРИНКАСТ #N] tag — it is NOT a positional counter. `pnpm prep` hard-fails (writing
+     nothing) if a #N has no block here, or a block here has no #N in script.md. -->
 
 <a id="scene-1"></a>
 ### SCENE 1 — <short label>  ·  _beat: <beat>_

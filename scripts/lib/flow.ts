@@ -45,7 +45,7 @@ const PHASE_COMMAND: Record<string, string | null> = {
 const PHASE_HINT: Record<string, string> = {
   assets: 'thumbnails: pnpm scene && pnpm thumbs   ·   star data: pnpm chart   ·   prep docs: pnpm prep',
   manual:
-    'Ручная фаза — команды нет: голос + скринкаст (SHOTLIST.md → REPRO.md), мемы по MEME_LIST.md,\n' +
+    'Ручная фаза — команды нет: голос по VOICE.md, скринкаст по RECORDING.md, мемы по MEME_LIST.md,\n' +
     'монтаж в DaVinci Resolve, затем сверка таймкодов в STATE.md/script.md.\n' +
     'Когда монтаж готов:  /publish-pack',
 }
@@ -126,7 +126,7 @@ const SCRIPTS = [
   ['pnpm thumbs', 'render the thumbnail contact sheet'],
   ['pnpm studio', 'Remotion studio — live prop controls'],
   ['pnpm chart', 'fetch REAL star history → StarChart.props.json'],
-  ['pnpm prep', 'SHOTLIST.md + MEME_LIST.md  (rewrites MEME_LIST from scratch)'],
+  ['pnpm prep', 'RECORDING.md + VOICE.md + MEME_LIST.md  (ticks carried over by scene ID)'],
 ]
 
 /** The one-screen cheat sheet. */

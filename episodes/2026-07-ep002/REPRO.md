@@ -60,7 +60,7 @@ hdiutil detach /Volumes/meetily
 
 ---
 
-## Scenes  <!-- one block per [СКРИНКАСТ] cue, in shooting order; SHOTLIST item N → #scene-N -->
+## Scenes  <!-- one block per [СКРИНКАСТ #N] cue; the anchor's N IS the script's N -->
 
 ⚠️ **Сцену 2 снимай ПЕРВОЙ по времени, если качаешь DMG браузером** — только браузер ставит
 флаг карантина. Если уже скачал через `gh`, флаг ставится руками (см. Failure recipes).

@@ -65,7 +65,7 @@ pnpm thumbs -- --episode 2026-07-ep001
 | `pnpm thumbs` | Render every variant into the self-refreshing contact sheet | no |
 | `pnpm studio` | Remotion studio (runs from the repo root; live prop controls) | no |
 | `pnpm chart` | Fetch REAL star history → `StarChart.props.json` | no (GitHub API) |
-| `pnpm prep` | `SHOTLIST.md` + `MEME_LIST.md` (⚠ rewrites `MEME_LIST.md` from scratch) | no |
+| `pnpm prep` | `RECORDING.md` + `VOICE.md` + `MEME_LIST.md` (MEME_LIST only if missing; ticks carried over by scene ID; `--force` discards them) | no |
 
 The whole thumbnail leg is therefore **`pnpm scene && pnpm thumbs`** — generate, apply, look at it.
 `pnpm scene` needs `GEMINI_API_KEY` in the environment; nothing else here does.
