@@ -55,3 +55,4 @@ Manual phase — подготовка к записи:
 - assets/: StarChart.mp4, Intro.mp4, VerdictCard.mp4, thumb-variants.json (3 варианта),
   preview/ (thumb-v1..v3 + 120px, index.html), MEME_LIST.md, StarChart.props.json
   (real data — tier=graphql, 20 pts) · RECORDING.md (9 сцен) + VOICE.md (17 блоков) в корне эпизода
+- publish/: present (pre-pack — titles, description, tags, shorts-pitches; captions ждут /cut-shorts)

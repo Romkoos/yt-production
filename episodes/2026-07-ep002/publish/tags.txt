@@ -1,0 +1,4 @@
+разбор репозиториев, open source, обзор, github, трендовые репозитории, разбор кода, senior skeptic,
+meetily, ии ассистент встреч, транскрипция, локальный ии, приватность, privacy first, whisper, parakeet,
+rust, tauri, sqlite, posthog, аналитика, телеметрия, нотаризация, gatekeeper, macos, dmg,
+ai meeting assistant, speech to text, диаризация, саммари встреч, ollama, self-hosted
