@@ -7,7 +7,7 @@ current_phase: assets
 phase_status: done
 verdict: ХАЙП
 youtube_video_id:
-updated: 2026-07-13
+updated: 2026-07-14
 ---
 
 ## Phase checklist
@@ -23,8 +23,8 @@ updated: 2026-07-13
 ## Next action
 Manual phase — подготовка к записи:
 - [ ] Музыка: сгенерировать трек в Suno
-- [ ] Голос: записать озвучку по script.md
-- [ ] Скринкаст: снять по SHOTLIST.md → REPRO.md (точные команды/что на экране/WAIT-CUT)
+- [ ] Голос: записать озвучку по VOICE.md (хук и вердикт — наизусть)
+- [ ] Скринкаст: снять по RECORDING.md (команды/что на экране/WAIT-CUT — всё внутри)
 - [ ] Проверка REPRO.md: пройти SETUP с нуля, свериться с prepared states
 - [ ] Мемы и звуки: скачать по assets/MEME_LIST.md
 - [ ] Монтаж в DaVinci Resolve
@@ -54,4 +54,4 @@ Manual phase — подготовка к записи:
 - sandbox/: episodes/2026-07-ep002/sandbox/meetily (+ `dist/` — DMG, `run/` — распакованный .app)
 - assets/: StarChart.mp4, Intro.mp4, VerdictCard.mp4, thumb-variants.json (3 варианта),
   preview/ (thumb-v1..v3 + 120px, index.html), MEME_LIST.md, StarChart.props.json
-  (real data — tier=graphql, 20 pts) · SHOTLIST.md (9 кадров) в корне эпизода
+  (real data — tier=graphql, 20 pts) · RECORDING.md (9 сцен) + VOICE.md (17 блоков) в корне эпизода
