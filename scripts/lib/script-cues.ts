@@ -18,7 +18,7 @@ export interface Cue {
 export interface VoiceRun {
   beat: string
   lines: string[]
-  cueIds: string[] // ids of the cues adjacent to this run (the one before it, the one after it)
+  cueIds: string[] // ids of every cue whose nearest run (in either direction) is this one
 }
 
 export interface ScriptDoc {
@@ -113,8 +113,11 @@ function headQuote(run: VoiceRun): string {
 }
 
 // The script as a linear sequence: voice runs, cues, and beat barriers. A cue associates with the
-// run immediately before it and the run immediately after it — a heading is a hard barrier, so a
-// cue never borrows voice from a different beat.
+// NEAREST voice run in each direction, looking PAST any intervening cues — a heading is a hard
+// barrier, so a cue never borrows voice from a different beat. Consequences, both wanted:
+// consecutive cues share a run, and one run can carry several cue ids (`→ #3 · M2 · S1`). Strict
+// positional adjacency would instead orphan any cue that sits between two other cues — its id
+// would appear in NO run's cueIds, silently punching a hole in the editor's footage mapping.
 type Item = { t: 'run'; r: VoiceRun } | { t: 'cue'; c: Cue } | { t: 'break' }
 
 export function parseScript(md: string): ScriptDoc {
@@ -159,17 +162,29 @@ export function parseScript(md: string): ScriptDoc {
   }
   closeRun()
 
+  // Walk out from a cue to the nearest run, stepping over cues; a beat break stops the walk dead.
+  const nearestRun = (from: number, step: -1 | 1): VoiceRun | null => {
+    for (let i = from + step; i >= 0 && i < seq.length; i += step) {
+      const item = seq[i]
+      if (item.t === 'break') return null // beat boundary — never associate across it
+      if (item.t === 'run') return item.r
+      // a cue: keep walking past it
+    }
+    return null
+  }
+
+  // In document order, so a run's cueIds read left-to-right as the script does.
   seq.forEach((item, i) => {
     if (item.t !== 'cue') return
-    const prev = seq[i - 1]
-    const next = seq[i + 1]
-    if (prev?.t === 'run') {
-      item.c.voiceBefore = tailQuote(prev.r)
-      if (item.c.id) prev.r.cueIds.push(item.c.id)
+    const prev = nearestRun(i, -1)
+    const next = nearestRun(i, 1)
+    if (prev) {
+      item.c.voiceBefore = tailQuote(prev)
+      if (item.c.id) prev.cueIds.push(item.c.id)
     }
-    if (next?.t === 'run') {
-      item.c.voiceAfter = headQuote(next.r)
-      if (item.c.id) next.r.cueIds.push(item.c.id)
+    if (next) {
+      item.c.voiceAfter = headQuote(next)
+      if (item.c.id) next.cueIds.push(item.c.id)
     }
   })
 

@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
-import { writePrepDocs } from './gen-prep-docs'
+import { writePrepDocs, prepEpisode } from './gen-prep-docs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const fixture = (name: string) => readFileSync(join(here, '__fixtures__', name), 'utf8')
@@ -75,6 +75,14 @@ describe('writePrepDocs', () => {
       expect(recording()).toMatch(/\*\*Делать:\*\*\n {4}```bash/)
       expect(recording()).not.toMatch(/\*\*Делать:\*\*[ \t]*\n[ \t]*\n/)
     })
+
+    // Finding #3 (review): the bullet regex MATCHED a leading ⚠️ on a label but never re-emitted
+    // it. Those are precisely the honesty-guard bullets ("чего этот вывод НЕ доказывает") — the
+    // host must see the flag in the doc he reads mid-shoot, not only in REPRO.md.
+    it('keeps the ⚠️ that leads a REPRO bullet label', () => {
+      writePrepDocs(paths, content)
+      expect(recording()).toContain('- ⚠️ **Чего этот вывод НЕ доказывает:** что подписана сама коробка')
+    })
   })
 
   describe('VOICE.md — one file drives the voice sitting', () => {
@@ -88,8 +96,19 @@ describe('writePrepDocs', () => {
 
     it('gives each block a margin note with the IDs it covers', () => {
       writePrepDocs(paths, content)
-      expect(voice()).toContain('→ #2 · S1') // the run between #2 and S1
-      expect(voice()).toContain('→ A1 · #3')
+      expect(voice()).toContain('→ #2 · S1 · A1') // the run between #2 and the S1+A1 cue pair
+      expect(voice()).toContain('→ S1 · A1 · #3')
+    })
+
+    // A cue that follows another cue (M1 follows #1) still names a block — otherwise its ID would
+    // appear NOWHERE in VOICE.md and the editor's footage mapping would be silently incomplete.
+    it('names every cue ID at least once — a cue behind another cue is not dropped', () => {
+      writePrepDocs(paths, content)
+      const notes = voice()
+        .split('\n')
+        .filter((l) => l.startsWith('> → '))
+        .join('\n')
+      for (const id of ['#1', '#2', '#3', 'M1', 'S1', 'A1', 'A2']) expect(notes).toContain(id)
     })
 
     it('marks the two learn-verbatim beats', () => {
@@ -280,6 +299,66 @@ describe('writePrepDocs', () => {
       expect(chunk2).toContain('SCENE-TWO-MARKER')
       expect(chunk2).not.toContain('первый по счёту')
       expect(chunk2).not.toContain('SCENE-ONE-MARKER')
+    })
+  })
+
+  // Finding #2 (review): the missing-REPRO guard used to run AFTER writePrepDocs. A script with no
+  // [СКРИНКАСТ #N] cues gives validateScript nothing to cross-check, so it sailed through, got its
+  // docs WRITTEN, and only then exited 1 — breaking the "writes nothing on failure" rule. The
+  // guard's ORDER is the behaviour under test, so it is exercised through the CLI body.
+  describe('prepEpisode — guard order (legacy first, then REPRO, then any write)', () => {
+    let root: string
+    const EP = 'ep-guard'
+    const at = (...p: string[]) => join(root, EP, ...p)
+
+    // Non-legacy (A1 carries an ID) and screencast-free: NOTHING for validateScript to reject.
+    const NO_SHOTS = ['## Хук (0–15 сек)', '', '[ГОЛОС] Двадцать тысяч звёзд.', '', '[АНИМАЦИЯ A1: StarChart]', ''].join('\n')
+
+    beforeEach(() => {
+      root = mkdtempSync(join(tmpdir(), 'prep-cli-'))
+      mkdirSync(join(root, EP), { recursive: true })
+      vi.spyOn(console, 'log').mockImplementation(() => {})
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+    })
+    afterEach(() => {
+      vi.restoreAllMocks()
+      rmSync(root, { recursive: true, force: true })
+    })
+
+    const wroteNothing = () => {
+      expect(existsSync(at('RECORDING.md'))).toBe(false)
+      expect(existsSync(at('VOICE.md'))).toBe(false)
+      expect(existsSync(at('assets', 'MEME_LIST.md'))).toBe(false)
+    }
+
+    it('fails a script with no screencast cues and no REPRO.md — BEFORE writing anything', () => {
+      writeFileSync(at('script.md'), NO_SHOTS)
+
+      expect(prepEpisode(EP, { root })).toBe(1)
+
+      expect(console.error).toHaveBeenCalledWith(`[gen-prep-docs] ${EP}: нет REPRO.md — сначала /script (Step 3)`)
+      wroteNothing()
+    })
+
+    it('still exits 0 on a LEGACY script with no REPRO.md — legacy wins over the REPRO guard', () => {
+      writeFileSync(at('script.md'), LEGACY)
+
+      expect(prepEpisode(EP, { root })).toBe(0)
+
+      expect(console.error).not.toHaveBeenCalled()
+      expect(vi.mocked(console.log).mock.calls.join('\n')).toMatch(/без ID-тегов/)
+      wroteNothing()
+    })
+
+    it('writes the docs when the script and REPRO.md are both there and consistent', () => {
+      writeFileSync(at('script.md'), SCRIPT)
+      writeFileSync(at('REPRO.md'), REPRO)
+
+      expect(prepEpisode(EP, { root })).toBe(0)
+
+      expect(existsSync(at('RECORDING.md'))).toBe(true)
+      expect(existsSync(at('VOICE.md'))).toBe(true)
+      expect(existsSync(at('assets', 'MEME_LIST.md'))).toBe(true)
     })
   })
 

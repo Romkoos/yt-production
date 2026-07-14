@@ -52,6 +52,7 @@ gh release download v1 --repo o/r --dir dist
 - **On screen:** `accepted / Notarized` и `rejected / Unnotarized` в одном кадре.
 - **Wait/Cut:** — (мгновенно). Оба вывода должны попасть в один кадр.
 - **Reset:** — (идемпотентно)
+- ⚠️ **Чего этот вывод НЕ доказывает:** что подписана сама коробка — проверяем ровно две вещи.
 
 ---
 

@@ -37,6 +37,18 @@ describe('parseRepro', () => {
     expect(s3.bullets.find((b) => b.label === 'On screen')!.body).not.toContain('spctl')
   })
 
+  // The ⚠️ on a label is the flag on the honesty-guard bullets ("что этот замер НЕ доказывает").
+  // Matching it and then dropping it would strip the warning off the doc the host reads mid-shoot.
+  it('captures the ⚠️ marker that leads a bullet LABEL, instead of swallowing it', () => {
+    const s3 = parseRepro(MINI).scenes[2]
+    const warn = s3.bullets.find((b) => b.label.startsWith('Чего этот вывод'))!
+    expect(warn.mark).toBe('⚠️')
+    expect(warn.label).toBe('Чего этот вывод НЕ доказывает') // the marker is not part of the label
+    expect(warn.body).toContain('проверяем ровно две вещи')
+    // an unmarked bullet carries no marker
+    expect(s3.bullets.find((b) => b.label === 'Do')!.mark).toBe('')
+  })
+
   it('carries an extra bullet (e.g. Failure recipe) through', () => {
     const s2 = parseRepro(MINI).scenes[1]
     expect(s2.bullets.map((b) => b.label)).toContain('Failure recipe')

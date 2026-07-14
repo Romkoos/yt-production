@@ -4,6 +4,7 @@
 // the source of truth; RECORDING is disposable. No IO.
 
 export interface ReproBullet {
+  mark: string // a leading warning marker on the LABEL ('⚠️' in `- ⚠️ **Label:** …`); '' if none
   label: string // '' means: a line with no `- **Label:**` shape, carried verbatim
   body: string
 }
@@ -58,9 +59,11 @@ function bullets(block: string): ReproBullet[] {
 
     if (startsBullet) {
       if (cur) out.push(cur)
-      // `- **Do:** …` / `- ⚠ **Что этот замер НЕ доказывает:** …`; anything else keeps label ''.
-      const m = raw.match(/^-\s+(?:⚠️?\s*)?\*\*(.+?):\*\*\s?(.*)$/)
-      cur = m ? { label: m[1].trim(), body: m[2] } : { label: '', body: raw }
+      // `- **Do:** …` / `- ⚠️ **Что этот замер НЕ доказывает:** …`; anything else keeps label ''.
+      // The warning marker is CAPTURED, not swallowed: it is the flag on the bullets that guard
+      // the channel's honesty rules, and the host reads the derived doc, not this one.
+      const m = raw.match(/^-\s+(?:(⚠️?)\s*)?\*\*(.+?):\*\*\s?(.*)$/)
+      cur = m ? { mark: m[1] ?? '', label: m[2].trim(), body: m[3] } : { mark: '', label: '', body: raw }
     } else if (cur) {
       // continuation line: dedent the two spaces markdown needs under a bullet
       cur.body += '\n' + raw.replace(/^ {1,2}/, '')
@@ -68,7 +71,7 @@ function bullets(block: string): ReproBullet[] {
     if (isFence) inFence = !inFence
   }
   if (cur) out.push(cur)
-  return out.map((b) => ({ label: b.label, body: b.body.trimEnd() }))
+  return out.map((b) => ({ mark: b.mark, label: b.label, body: b.body.trimEnd() }))
 }
 
 export function parseRepro(md: string): ReproDoc {

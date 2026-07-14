@@ -31,9 +31,9 @@ function arg(name: string): string | undefined {
   return i >= 0 ? process.argv[i + 1] : undefined
 }
 
-function repoFromState(episode: string): string {
+function repoFromState(root: string, episode: string): string {
   try {
-    const state = readFileSync(join('episodes', episode, 'STATE.md'), 'utf8')
+    const state = readFileSync(join(root, episode, 'STATE.md'), 'utf8')
     const m = state.match(/repo_url:\s*(\S+)/)
     if (m) return m[1].replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '')
   } catch {
@@ -81,7 +81,10 @@ function sceneBody(cue: Cue, scene: ReproScene): string {
       lines.push(`  ${indent(body, '  ')}`)
       continue
     }
-    const label = `**${LABELS[b.label] ?? b.label}:**`
+    // The ⚠️ on a REPRO bullet label survives into the doc the host reads mid-shoot — dropping it
+    // would strip the flag off exactly the bullets that carry a warning (e.g. "что этот замер НЕ
+    // доказывает"). Marker before the label, as in REPRO itself.
+    const label = `${b.mark ? `${b.mark} ` : ''}**${LABELS[b.label] ?? b.label}:**`
     // A multi-line body (a fenced block) drops to its own lines under the label — no trailing
     // space on the label line, no blank line before the fence. An inline body stays on the label.
     if (body.includes('\n')) {
@@ -237,49 +240,56 @@ export function writePrepDocs(
   }
 }
 
-function main() {
-  const episode = arg('--episode')
-  if (!episode) throw new Error('--episode <id> is required')
-  const force = process.argv.includes('--force')
-  const repo = repoFromState(episode)
+/** The CLI body, extracted so the guard ORDER is testable. Returns the process exit code.
+ *  Order matters and is load-bearing:
+ *    1. legacy short-circuits FIRST  — a pre-#N episode needs no REPRO.md and exits 0, silent;
+ *    2. a missing REPRO.md is a hard error — checked BEFORE anything is written, because a script
+ *       with zero [СКРИНКАСТ #N] cues has nothing for validateScript to cross-check, so a
+ *       post-write check would let it write its docs and only then fail;
+ *    3. only then is anything written. Nothing lands on disk on any non-zero path. */
+export function prepEpisode(episode: string, opts: { force?: boolean; root?: string } = {}): number {
+  const root = opts.root ?? 'episodes'
+  const force = opts.force === true
+  const repo = repoFromState(root, episode)
 
-  const script = readFileSync(join('episodes', episode, 'script.md'), 'utf8')
-  const reproPath = join('episodes', episode, 'REPRO.md')
-  const reproExists = existsSync(reproPath)
-  const repro = reproExists ? readFileSync(reproPath, 'utf8') : ''
+  const script = readFileSync(join(root, episode, 'script.md'), 'utf8')
 
-  const assetsDir = join('episodes', episode, 'assets')
+  if (isLegacyScript(parseScript(script))) {
+    console.log(
+      `[gen-prep-docs] ${episode}: script.md без ID-тегов (эпизод до введения #N) — ` +
+        `миграция не проводилась, пропускаю. Ничего не записано.`,
+    )
+    return 0 // a legacy episode is a statement, not a failure, even without REPRO.md
+  }
+
+  // Only a NON-legacy episode is actually blocked by a missing REPRO.md.
+  const reproPath = join(root, episode, 'REPRO.md')
+  if (!existsSync(reproPath)) {
+    console.error(`[gen-prep-docs] ${episode}: нет REPRO.md — сначала /script (Step 3)`)
+    return 1
+  }
+  const repro = readFileSync(reproPath, 'utf8')
+
+  const assetsDir = join(root, episode, 'assets')
   mkdirSync(assetsDir, { recursive: true })
 
   const result = writePrepDocs(
     {
-      recordingPath: join('episodes', episode, 'RECORDING.md'),
-      voicePath: join('episodes', episode, 'VOICE.md'),
+      recordingPath: join(root, episode, 'RECORDING.md'),
+      voicePath: join(root, episode, 'VOICE.md'),
       memePath: join(assetsDir, 'MEME_LIST.md'),
     },
     { episode, repo, script, repro },
     { force },
   )
 
-  if (result.status === 'legacy') {
-    console.log(
-      `[gen-prep-docs] ${episode}: script.md без ID-тегов (эпизод до введения #N) — ` +
-        `миграция не проводилась, пропускаю. Ничего не записано.`,
-    )
-    return // exit 0 — a legacy episode is a statement, not a failure, even without REPRO.md
-  }
-
-  // Only a NON-legacy episode is actually blocked by a missing REPRO.md.
-  if (!reproExists) {
-    console.error(`[gen-prep-docs] ${episode}: нет REPRO.md — сначала /script (Step 3)`)
-    process.exit(1)
-  }
-
   if (result.status === 'invalid') {
     console.error(`[gen-prep-docs] ${episode}: script.md ↔ REPRO.md рассинхронизированы — ничего не записано:`)
     for (const e of result.errors) console.error(`  ✗ ${e}`)
-    process.exit(1)
+    return 1
   }
+  // writePrepDocs re-checks legacy as a pure-function guarantee; the CLI already short-circuited it.
+  if (result.status === 'legacy') return 0
 
   const { merge } = result
   console.log(`[gen-prep-docs] ${episode}:`)
@@ -300,6 +310,14 @@ function main() {
     `  assets/MEME_LIST.md  ` +
       (result.memeScaffolded ? `${result.memes} мем-кью, скаффолд создан` : `не тронут — уже существует`),
   )
+  return 0
+}
+
+function main() {
+  const episode = arg('--episode')
+  if (!episode) throw new Error('--episode <id> is required')
+  const code = prepEpisode(episode, { force: process.argv.includes('--force') })
+  if (code !== 0) process.exit(code)
 }
 
 // Run main only when invoked directly, not when imported by tests.

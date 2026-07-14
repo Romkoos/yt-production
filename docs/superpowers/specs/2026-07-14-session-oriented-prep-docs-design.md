@@ -64,8 +64,18 @@ scripts that *do* carry IDs.
 ## 3. Voice↔scene association — derived once, used twice
 
 The script is a linear sequence of voice runs and cues. A **voice run** is a maximal run of
-consecutive `[ГОЛОС]` lines, broken by any cue or any `##` heading. A cue's window is the run
-immediately **before** it and the run immediately **after** it.
+consecutive `[ГОЛОС]` lines, broken by any cue or any `##` heading. A cue's window is the
+**nearest** voice run in each direction: the association walks **past any intervening cues**, and
+stops dead at a `##` heading — a beat is a hard barrier, so a cue never borrows voice from a
+different beat.
+
+Walking past cues, rather than requiring strict positional adjacency, is load-bearing: cues cluster
+(a `[МЕМ]` right after a `[СКРИНКАСТ]`, a `[SHORT cut]` right before an `[АНИМАЦИЯ]`), and an
+adjacency-only rule would leave every cue wedged between two other cues associated with **no** run
+at all — its ID would then appear in no margin note in `VOICE.md`, silently holing the editor's
+footage mapping. Two consequences, both intended: consecutive cues share a run, and one run can
+accumulate several IDs (`→ #3 · M2 · S1` in §6). A cue at the end of a beat, with nothing but a
+heading after it, still gets an empty *«Дальше»*.
 
 One function computes this association; both docs read it, in opposite directions:
 

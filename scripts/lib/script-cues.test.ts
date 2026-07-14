@@ -43,29 +43,44 @@ describe('parseScript — voice association', () => {
     expect(byId['#3'].voiceAfter).toBe('Приложение нотаризовано.')
   })
 
-  it('leaves the association empty when a cue is adjacent to another cue, not to voice', () => {
+  it('walks past an intervening cue to the nearest voice run', () => {
     const byId = Object.fromEntries(parseScript(MINI).cues.map((c) => [c.id, c]))
-    expect(byId['M1'].voiceBefore).toBe('') // preceded by cue #1
-    expect(byId['A1'].voiceBefore).toBe('') // preceded by cue S1
+    // M1 is preceded by cue #1, not by voice — it must still reach the Хук run behind it.
+    expect(byId['M1'].voiceBefore).toBe('Начну с последнего.')
+    // A1 is preceded by cue S1; S1 is followed by cue A1. Both look past it, to the same runs.
+    expect(byId['A1'].voiceBefore).toBe('Первый же шаг инструкции не работает.')
+    expect(byId['S1'].voiceBefore).toBe('Первый же шаг инструкции не работает.')
     expect(byId['A1'].voiceAfter).toBe('И самое обидное — они почти всё сделали правильно.')
+    expect(byId['S1'].voiceAfter).toBe('И самое обидное — они почти всё сделали правильно.')
   })
 
   it('never associates across a beat heading', () => {
     const byId = Object.fromEntries(parseScript(MINI).cues.map((c) => [c.id, c]))
-    // #1's run is the last thing in Хук; M1 closes the beat, so nothing follows it.
+    // M1 closes the Хук beat: nothing but a heading follows it. The walk stops at the barrier.
     expect(byId['M1'].voiceAfter).toBe('')
+    // #1's forward walk steps past M1 — and then hits the very same barrier.
+    expect(byId['#1'].voiceAfter).toBe('')
+    // A2 closes the document.
+    expect(byId['A2'].voiceAfter).toBe('')
   })
 
-  it('gives each voice run the IDs of the cues adjacent to it', () => {
+  it('gives each voice run the IDs of every cue whose nearest run it is', () => {
     const { runs } = parseScript(MINI)
     expect(runs.map((r) => r.cueIds)).toEqual([
-      ['#1'],          // Хук run, followed by #1
-      ['#2'],          // "README обещает…", followed by #2
-      ['#2', 'S1'],    // sits BETWEEN #2 and S1
-      ['A1', '#3'],    // sits between A1 and #3
-      ['#3'],          // "Приложение нотаризовано…", preceded by #3
-      ['A2'],          // Вердикт run, followed by A2
+      ['#1', 'M1'],         // Хук run: #1 follows it, M1 follows #1 and looks back past it
+      ['#2'],               // "README обещает…", followed by #2
+      ['#2', 'S1', 'A1'],   // sits before the S1+A1 cue pair — three IDs on one run
+      ['S1', 'A1', '#3'],   // the pair plays into it, and #3 looks back past nothing
+      ['#3'],               // "Приложение нотаризовано…", preceded by #3
+      ['A2'],               // Вердикт run, followed by A2
     ])
+  })
+
+  it('leaves NO cue out of the footage mapping — every ID lands in some run', () => {
+    const { cues, runs } = parseScript(MINI)
+    const mapped = new Set(runs.flatMap((r) => r.cueIds))
+    const orphans = cues.filter((c) => c.id && !mapped.has(c.id)).map((c) => c.id)
+    expect(orphans).toEqual([]) // an orphan cue is footage the editor can never place
   })
 
   it('keeps voice lines in reading order, one entry per [ГОЛОС]', () => {
