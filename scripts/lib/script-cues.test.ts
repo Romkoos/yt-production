@@ -64,6 +64,30 @@ describe('parseScript — voice association', () => {
     expect(byId['A2'].voiceAfter).toBe('')
   })
 
+  it('opens a beat on a cue: no voice behind it, but it still maps forward', () => {
+    // The mirror of the barrier case above. A beat that starts with a cue (no [ГОЛОС] before it
+    // in that beat) leaves «Звучит под» empty — RECORDING.md simply omits the line — but the cue
+    // must still reach the run that FOLLOWS it, or its ID would vanish from the footage mapping.
+    const md = [
+      '## Хук',
+      '[ГОЛОС] Реплика предыдущего бита.',
+      '',
+      '## Живой тест',
+      '[СКРИНКАСТ #1: кадр, открывающий бит]',
+      '[ГОЛОС] А вот теперь я говорю.',
+    ].join('\n')
+
+    const { cues, runs } = parseScript(md)
+    const shot = cues.find((c) => c.id === '#1')!
+
+    expect(shot.voiceBefore).toBe('') // the walk back stops at the beat heading — no borrowing
+    expect(shot.voiceAfter).toBe('А вот теперь я говорю.')
+    // and it is NOT orphaned: it lands in the following run's margin note
+    expect(runs.find((r) => r.beat === 'Живой тест')!.cueIds).toEqual(['#1'])
+    // the previous beat's run must not have picked it up across the barrier
+    expect(runs.find((r) => r.beat === 'Хук')!.cueIds).toEqual([])
+  })
+
   it('gives each voice run the IDs of every cue whose nearest run it is', () => {
     const { runs } = parseScript(MINI)
     expect(runs.map((r) => r.cueIds)).toEqual([
