@@ -245,11 +245,8 @@ function main() {
 
   const script = readFileSync(join('episodes', episode, 'script.md'), 'utf8')
   const reproPath = join('episodes', episode, 'REPRO.md')
-  if (!existsSync(reproPath)) {
-    console.error(`[gen-prep-docs] ${episode}: нет REPRO.md — сначала /script (Step 3)`)
-    process.exit(1)
-  }
-  const repro = readFileSync(reproPath, 'utf8')
+  const reproExists = existsSync(reproPath)
+  const repro = reproExists ? readFileSync(reproPath, 'utf8') : ''
 
   const assetsDir = join('episodes', episode, 'assets')
   mkdirSync(assetsDir, { recursive: true })
@@ -269,7 +266,13 @@ function main() {
       `[gen-prep-docs] ${episode}: script.md без ID-тегов (эпизод до введения #N) — ` +
         `миграция не проводилась, пропускаю. Ничего не записано.`,
     )
-    return // exit 0 — a legacy episode is a statement, not a failure
+    return // exit 0 — a legacy episode is a statement, not a failure, even without REPRO.md
+  }
+
+  // Only a NON-legacy episode is actually blocked by a missing REPRO.md.
+  if (!reproExists) {
+    console.error(`[gen-prep-docs] ${episode}: нет REPRO.md — сначала /script (Step 3)`)
+    process.exit(1)
   }
 
   if (result.status === 'invalid') {

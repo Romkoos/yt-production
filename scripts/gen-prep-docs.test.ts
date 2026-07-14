@@ -226,12 +226,82 @@ describe('writePrepDocs', () => {
     })
   })
 
+  // Finding #2 (review): scene lookup is `byNum.get(cue.num)`, keyed on the <a id="scene-N">
+  // anchor value — NOT `repro.scenes[i]` by array position. Every OTHER fixture happens to have
+  // num === index+1, so a regression to positional lookup would slip past every other test here.
+  // This fixture deliberately lists the REPRO scene blocks in the WRONG physical order (scene-2
+  // before scene-1) so the two lookup strategies disagree, and only the by-number one is correct.
+  describe('scene lookup — by REPRO anchor number, not array position', () => {
+    const SCRIPT_OOO = [
+      '# Сценарий: out-of-order test',
+      '',
+      '## Live test',
+      '',
+      '[СКРИНКАСТ #1: сцена раз]',
+      '',
+      '[СКРИНКАСТ #2: сцена два]',
+      '',
+    ].join('\n')
+
+    const REPRO_OOO = [
+      '# REPRO — out-of-order test',
+      '',
+      '## Scenes',
+      '',
+      '<a id="scene-2"></a>',
+      '### SCENE 2 — второй по счёту  ·  _beat: Live test_',
+      '- **Do:** SCENE-TWO-MARKER',
+      '',
+      '<a id="scene-1"></a>',
+      '### SCENE 1 — первый по счёту  ·  _beat: Live test_',
+      '- **Do:** SCENE-ONE-MARKER',
+      '',
+      '## Failure recipes',
+      '',
+    ].join('\n')
+
+    it('maps #1 to the anchor scene-1 block and #2 to scene-2, even though scene-2 comes first in the file', () => {
+      const r = writePrepDocs(paths, { episode: 'ep-ooo', repo: 'o/r', script: SCRIPT_OOO, repro: REPRO_OOO })
+      expect(r.status).toBe('written')
+
+      const md = recording()
+      const chunk1 = md.slice(md.indexOf('#1 —'), md.indexOf('#2 —'))
+      const chunk2 = md.slice(md.indexOf('#2 —'))
+
+      // #1 must carry scene-1's content (title + marker) — NOT scene-2's, which is what a
+      // `repro.scenes[i]` regression would wire up instead (scene-2 is physically first).
+      expect(chunk1).toContain('первый по счёту')
+      expect(chunk1).toContain('SCENE-ONE-MARKER')
+      expect(chunk1).not.toContain('второй по счёту')
+      expect(chunk1).not.toContain('SCENE-TWO-MARKER')
+
+      // #2 must carry scene-2's content — not scene-1's.
+      expect(chunk2).toContain('второй по счёту')
+      expect(chunk2).toContain('SCENE-TWO-MARKER')
+      expect(chunk2).not.toContain('первый по счёту')
+      expect(chunk2).not.toContain('SCENE-ONE-MARKER')
+    })
+  })
+
   describe('legacy episodes', () => {
     it('skips a pre-#N script without writing anything (and without erroring)', () => {
       const r = writePrepDocs(paths, { ...content, script: LEGACY })
 
       expect(r.status).toBe('legacy')
       expect(existsSync(paths.recordingPath)).toBe(false)
+      expect(existsSync(paths.memePath)).toBe(false)
+    })
+
+    // Finding #1 (review): the CLI's legacy check must win over its missing-REPRO check, so a
+    // legacy episode that also lacks a REPRO.md still exits clean. writePrepDocs's legacy check
+    // runs before parseRepro (see gen-prep-docs.ts), so an empty repro string must be just as
+    // safe as a real one — this is the unit-level half of that contract.
+    it('returns legacy — and writes nothing — even when repro is the empty string', () => {
+      const r = writePrepDocs(paths, { ...content, script: LEGACY, repro: '' })
+
+      expect(r.status).toBe('legacy')
+      expect(existsSync(paths.recordingPath)).toBe(false)
+      expect(existsSync(paths.voicePath)).toBe(false)
       expect(existsSync(paths.memePath)).toBe(false)
     })
   })
