@@ -48,6 +48,9 @@ const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\
 
 const norm = (s: string): string => s.replace(/\s+/g, ' ').trim()
 
+const HEADING_LINE_RE = /^\s*#{1,6}\s/
+const HR_LINE_RE = /^\s*---\s*$/
+
 type Tok =
   | { index: number; type: 'heading'; beat: string }
   | { index: number; type: 'voice'; text: string }
@@ -61,9 +64,14 @@ function tokenize(md: string): Tok[] {
     // strip a trailing timing paren like " (0–15 сек)" for a clean beat label
     toks.push({ index: m.index, type: 'heading', beat: m[1].replace(/\s*\([^)]*\)\s*$/, '').trim() })
   }
-  // A voice line runs until the next tag — so a wrapped line is captured whole.
+  // A voice line runs until the next tag — so a wrapped line is captured whole. It must also
+  // stop at a heading or a horizontal rule: those are barriers too (see the cue-association
+  // pass below), and neither is prose the host should read.
   for (const m of clean.matchAll(/\[ГОЛОС\]\s*([^[]*)/g)) {
-    toks.push({ index: m.index, type: 'voice', text: norm(m[1]) })
+    const lines = m[1].split(/\r?\n/)
+    const barrier = lines.findIndex((l) => HEADING_LINE_RE.test(l) || HR_LINE_RE.test(l))
+    const text = barrier === -1 ? lines.join('\n') : lines.slice(0, barrier).join('\n')
+    toks.push({ index: m.index, type: 'voice', text: norm(text) })
   }
   for (const { kind, tag, prefix } of KINDS) {
     const re = new RegExp(
@@ -86,7 +94,7 @@ const sentences = (line: string): string[] =>
     .filter(Boolean)
 
 /** The TAIL of a run: its final sentence. What the host hears right before the scene cuts in. */
-export function tailQuote(run: VoiceRun): string {
+function tailQuote(run: VoiceRun): string {
   const last = run.lines[run.lines.length - 1]
   if (!last) return ''
   const ss = sentences(last)
@@ -96,7 +104,7 @@ export function tailQuote(run: VoiceRun): string {
 }
 
 /** The HEAD of a run: its opening sentence. What the scene plays into. */
-export function headQuote(run: VoiceRun): string {
+function headQuote(run: VoiceRun): string {
   const first = run.lines[0]
   if (!first) return ''
   const sentence = sentences(first)[0] ?? first

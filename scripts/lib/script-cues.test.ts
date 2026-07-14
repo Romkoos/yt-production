@@ -76,6 +76,50 @@ describe('parseScript — voice association', () => {
       'Я проверил все три. Начну с последнего.',
     ])
   })
+
+  it('terminates a voice line at the "---" rule / next heading, not just the next cue (regression)', () => {
+    // The final [ГОЛОС] of "Живой тест" is followed by a bare `---` and then `## Вердикт`,
+    // with no cue in between. Neither may leak into the captured voice text.
+    const { runs } = parseScript(MINI)
+    const beatFinal = runs.find(
+      (r) => r.beat === 'Живой тест' && r.lines[0]?.startsWith('Приложение нотаризовано'),
+    )
+    expect(beatFinal?.lines).toEqual(['Приложение нотаризовано. Забыли коробку, в которой оно лежит.'])
+    expect(beatFinal?.lines.join(' ')).not.toMatch(/---/)
+    expect(beatFinal?.lines.join(' ')).not.toMatch(/##/)
+  })
+})
+
+describe('parseScript — quote truncation (WORD_CAP)', () => {
+  // tailQuote/headQuote are module-private; exercise their truncation branches through the
+  // public cue voiceBefore/voiceAfter fields instead of importing them directly.
+  const RU_NUMS = [
+    'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь',
+    'девять', 'десять', 'одиннадцать', 'двенадцать', 'тринадцать', 'четырнадцать', 'пятнадцать',
+  ]
+  const withPeriod = (words: string[]) => [...words.slice(0, -1), `${words[words.length - 1]}.`]
+
+  const TAIL_WORDS = withPeriod(RU_NUMS.slice(0, 14)) // 14 words > WORD_CAP (12)
+  const HEAD_WORDS = withPeriod(RU_NUMS.slice(0, 15)) // 15 words > WORD_CAP (12)
+
+  const CAP_SCRIPT = `## Тест (0–1 сек)
+
+[ГОЛОС] ${TAIL_WORDS.join(' ')}
+
+[СКРИНКАСТ #1: заглушка]
+
+[ГОЛОС] ${HEAD_WORDS.join(' ')}
+`
+
+  it('truncates a long TAIL quote to the last WORD_CAP words with a leading ellipsis', () => {
+    const { cues } = parseScript(CAP_SCRIPT)
+    expect(cues[0].voiceBefore).toBe(`…${TAIL_WORDS.slice(-12).join(' ')}`)
+  })
+
+  it('truncates a long HEAD quote to the first WORD_CAP words with a trailing ellipsis', () => {
+    const { cues } = parseScript(CAP_SCRIPT)
+    expect(cues[0].voiceAfter).toBe(`${HEAD_WORDS.slice(0, 12).join(' ')}…`)
+  })
 })
 
 describe('isLegacyScript', () => {
@@ -114,7 +158,10 @@ describe('validateScript', () => {
 
   it('rejects a duplicate ID', () => {
     const dup = MINI.replace('[СКРИНКАСТ #3:', '[СКРИНКАСТ #2:')
-    expect(validateScript(parseScript(dup), scenes).length).toBeGreaterThan(0)
+    const errors = validateScript(parseScript(dup), scenes)
+    expect(errors.length).toBeGreaterThan(0)
+    // Must name the offending kind, not just fail for any reason.
+    expect(errors.join('\n')).toMatch(/СКРИНКАСТ/)
   })
 
   it('rejects a #N with no REPRO scene block (script → REPRO direction)', () => {
