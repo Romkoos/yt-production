@@ -157,11 +157,11 @@ never silently remapped. `--force` discards all tick state.
 - `## Artifacts`: set the `assets/` line to list the rendered files + prep docs present.
 - `## Next action`: replace with the **manual-phase prep checklist**:
   ```
-  Manual phase — подготовка к записи:
+  Manual phase — подготовка к записи (порядок обязателен — ГОЛОС строго ПОСЛЕ съёмки):
+  - [ ] Пре-флайт / чистый лист: пройти REPRO.md SETUP с нуля, свериться с prepared states
   - [ ] Музыка: сгенерировать трек в Suno
-  - [ ] Голос: записать озвучку по VOICE.md (хук и вердикт — наизусть)
   - [ ] Скринкаст: снять по RECORDING.md (команды/что на экране/WAIT-CUT — всё внутри)
-  - [ ] Проверка REPRO.md: пройти SETUP с нуля, свериться с prepared states
+  - [ ] Голос: записать озвучку по VOICE.md ⚠️ строго ПОСЛЕ съёмки — вердикт и свидетельства существуют только после дубля (хук наизусть)
   - [ ] Мемы и звуки: скачать по assets/MEME_LIST.md
   - [ ] Монтаж в DaVinci Resolve
   - [ ] Сверка таймкодов: записать реальные таймкоды в STATE.md/script.md

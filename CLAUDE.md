@@ -92,6 +92,10 @@ proofs) are woven **into the flow** at the point the narrative needs them — th
 hypothesis right where the user would hit the problem. **The edit carves scenes out of one honest
 take**; scenes are never shot as isolated setups.
 
+**Voice records *after* the take, never before** — the take decides what is true: the verdict and the
+on-screen evidence only exist once the shooting is done, so the manual-phase order is always
+screencast → voice.
+
 Prepared states are allowed **only for off-camera time savings** (e.g. pre-downloading model
 weights before the session) and must **never appear in frame as a shortcut the user wouldn't have
 taken**. Beware one-shot moments: some evidence exists **only in the first run from a clean slate**
