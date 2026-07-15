@@ -1,7 +1,14 @@
-// Pure parsing of an episode's REPRO.md — the reproduction protocol (/review-repo writes the
-// prepared states, SETUP and failure recipes; /script fills the scene blocks). RECORDING.md is
-// assembled from these pieces verbatim, so the host never opens REPRO mid-session. REPRO stays
-// the source of truth; RECORDING is disposable. No IO.
+// Pure parsing of an episode's REPRO.md — the reproduction protocol under the LINEAR-TAKE
+// doctrine. The host records the user's real path in one continuous take from a clean machine
+// state; evidence proofs are woven into that flow at the point the narrative needs them. So REPRO
+// is not a set of isolated scene setups — it is one ordered flow (## User flow) plus the proofs
+// that hang off it (## Evidence inserts), bracketed by a wipe (## Clean slate) and the one-shot
+// warnings (## Environment caveats).
+//
+// /review-repo writes the flow, evidence, clean slate and caveats (it walked the real path);
+// /script confirms the [СКРИНКАСТ #N] cues that reference them. RECORDING.md is assembled from
+// these pieces verbatim, so the host never opens REPRO mid-session. REPRO stays the source of
+// truth; RECORDING is disposable. No IO.
 
 export interface ReproBullet {
   mark: string // a leading warning marker on the LABEL ('⚠️' in `- ⚠️ **Label:** …`); '' if none
@@ -18,10 +25,10 @@ export interface ReproScene {
 
 export interface ReproDoc {
   timeBudget: string
-  preparedStates: string
-  scenesPreamble: string // warnings that precede the first scene (e.g. "снимай сцену 2 первой")
-  scenes: ReproScene[]
-  failureRecipes: string
+  cleanSlate: string // ## Clean slate — wipe commands, rendered as the RECORDING pre-flight checklist
+  scenes: ReproScene[] // every <a id="scene-N"> block, gathered doc-wide (## User flow + ## Evidence inserts)
+  envCaveats: string // ## Environment caveats — one-shot moments ("этот кадр только в первом прогоне")
+  preparedStates: string // ## Prepared states — optional, off-camera time savings ONLY (never in frame)
 }
 
 const stripComments = (md: string): string => md.replace(/<!--[\s\S]*?-->/g, '')
@@ -46,7 +53,12 @@ function section(md: string, heading: string): string {
 }
 
 const SCENE_ANCHOR = /<a id="scene-(\d+)"><\/a>/g
-const SCENE_HEADER = /^###\s+SCENE\s+\d+\s*[—–-]\s*(.*?)(?:\s*·\s*_beat:\s*(.*?)_)?\s*$/m
+// The header word is cosmetic (FLOW / EVIDENCE / SCENE …) — the scene number always comes off the
+// anchor above it, never off this line. So accept any leading word before the number.
+const SCENE_HEADER = /^###\s+\S+\s+\d+\s*[—–-]\s*(.*?)(?:\s*·\s*_beat:\s*(.*?)_)?\s*$/m
+// A `## ` heading ends a scene block: an ## Evidence inserts block must not bleed into the
+// following ## Environment caveats section.
+const SECTION_HEADING = /^##\s/m
 
 function bullets(block: string): ReproBullet[] {
   const out: ReproBullet[] = []
@@ -59,7 +71,7 @@ function bullets(block: string): ReproBullet[] {
 
     if (startsBullet) {
       if (cur) out.push(cur)
-      // `- **Do:** …` / `- ⚠️ **Что этот замер НЕ доказывает:** …`; anything else keeps label ''.
+      // `- **Do:** …` / `- ⚠️ **Чего этот вывод НЕ доказывает:** …`; anything else keeps label ''.
       // The warning marker is CAPTURED, not swallowed: it is the flag on the bullets that guard
       // the channel's honesty rules, and the host reads the derived doc, not this one.
       const m = raw.match(/^-\s+(?:(⚠️?)\s*)?\*\*(.+?):\*\*\s?(.*)$/)
@@ -78,15 +90,23 @@ export function parseRepro(md: string): ReproDoc {
   const clean = stripComments(md)
 
   const budget = clean.match(/\*\*Recording time budget:\*\*\s*([\s\S]*?)(?:\n\s*\n|$)/)
-  const scenesBody = section(clean, 'Scenes')
 
-  const anchors = [...scenesBody.matchAll(SCENE_ANCHOR)]
-  const scenesPreamble = (anchors.length ? scenesBody.slice(0, anchors[0].index) : scenesBody).trim()
-
+  // Anchors are gathered DOC-WIDE, not from a single section: a screencast scene is either a
+  // ## User flow step or an ## Evidence insert, and both carry <a id="scene-N">. Each block runs
+  // from its anchor to whichever comes first — the next anchor, or the next `## ` section heading.
+  const anchors = [...clean.matchAll(SCENE_ANCHOR)]
   const scenes: ReproScene[] = anchors.map((a, i) => {
     const from = a.index + a[0].length
-    const to = i + 1 < anchors.length ? anchors[i + 1].index : scenesBody.length
-    const block = scenesBody.slice(from, to).trim()
+    const nextAnchor = i + 1 < anchors.length ? anchors[i + 1].index : clean.length
+    const rest = clean.slice(from)
+    const nextHeading = rest.search(SECTION_HEADING)
+    const headingBound = nextHeading < 0 ? clean.length : from + nextHeading
+    // Drop standalone `---` rule lines (the visual separators between blocks) so a trailing rule
+    // never bleeds into the previous bullet's body — matches how the old section-scoped parse did it.
+    const block = clean
+      .slice(from, Math.min(nextAnchor, headingBound))
+      .replace(/^\s*---\s*$/gm, '')
+      .trim()
     const header = block.match(SCENE_HEADER)
     const body = header ? block.slice(block.indexOf(header[0]) + header[0].length) : block
     return {
@@ -99,9 +119,9 @@ export function parseRepro(md: string): ReproDoc {
 
   return {
     timeBudget: budget ? budget[1].replace(/\s+/g, ' ').trim() : '',
-    preparedStates: section(clean, 'Prepared states'),
-    scenesPreamble,
+    cleanSlate: section(clean, 'Clean slate'),
     scenes,
-    failureRecipes: section(clean, 'Failure recipes'),
+    envCaveats: section(clean, 'Environment caveats'),
+    preparedStates: section(clean, 'Prepared states'),
   }
 }

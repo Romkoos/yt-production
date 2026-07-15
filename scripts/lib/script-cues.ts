@@ -198,7 +198,8 @@ export function isLegacyScript(doc: ScriptDoc): boolean {
 }
 
 /** Russian error messages for the host; [] means valid. `reproSceneNums` are the N's of the
- *  `<a id="scene-N">` blocks found in REPRO.md. */
+ *  `<a id="scene-N">` blocks found in REPRO.md, IN PHYSICAL FILE ORDER (the order the host will
+ *  shoot them). */
 export function validateScript(doc: ScriptDoc, reproSceneNums: number[]): string[] {
   const errors: string[] = []
 
@@ -212,6 +213,19 @@ export function validateScript(doc: ScriptDoc, reproSceneNums: number[]): string
   }
   // Numbering and cross-doc checks are meaningless until every cue has an ID.
   if (errors.length) return errors
+
+  // Linear-take doctrine: the scene numbers must ASCEND along the flow, because the narrative
+  // order (script) IS the shooting order (flow) by construction. An out-of-order anchor means the
+  // REPRO flow no longer reads top-to-bottom as the host records — reject it, write nothing.
+  for (let i = 1; i < reproSceneNums.length; i++) {
+    if (reproSceneNums[i] <= reproSceneNums[i - 1]) {
+      errors.push(
+        `REPRO.md: блоки <a id="scene-N"> должны идти по возрастанию вдоль потока ` +
+          `(порядок повествования = порядок съёмки), а в файле: ${reproSceneNums.join(', ')}`,
+      )
+      break
+    }
+  }
 
   for (const { kind, tag, prefix } of KINDS) {
     const nums = doc.cues.filter((c) => c.kind === kind).map((c) => c.num as number)

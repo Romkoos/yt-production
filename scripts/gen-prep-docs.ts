@@ -59,6 +59,7 @@ const LABELS: Record<string, string> = {
   'On screen': 'На экране',
   'Wait/Cut': 'Wait/Cut',
   Reset: 'Reset',
+  Anchor: 'Куда вставить', // an ## Evidence insert's anchor to a flow step («сразу после шага 2»)
 }
 
 const RESET_MARK = '(⟳ сцена изменилась после отметки — переснять?)'
@@ -125,15 +126,31 @@ function buildRecording(
   const box = (s: TickState): string => (s === 'ticked' ? 'x' : ' ')
 
   let out = `# RECORDING — ${episode} (${repo})\n\n`
-  out += `Сессия скринкаста: один файл на одну посадку. Всё, что нужно снять, — здесь; REPRO.md\n`
-  out += `остаётся источником правды, но открывать его по ходу записи не нужно.\n`
+  out += `Линейный съёмочный прогон: один непрерывный дубль по пути пользователя, сверху вниз.\n`
+  out += `Ничего не снимай вне порядка — сцены вырезаются из одного честного дубля на монтаже.\n`
+  out += `Доказательства вплетены в поток там, где пользователь упёрся бы в проблему.\n`
+  out += `REPRO.md остаётся источником правды; открывать его по ходу записи не нужно.\n`
   out += `Это clock (b): тайминга здесь нет — только что снять.\n\n`
   if (repro.timeBudget) out += `**Recording time budget:** ${repro.timeBudget}\n\n`
 
-  out += `---\n\n## Pre-flight\n\n`
-  if (repro.scenesPreamble) out += `${repro.scenesPreamble}\n\n`
-  if (repro.preparedStates) out += `${repro.preparedStates}\n\n`
-  out += `> SETUP (zero-to-running) — в REPRO.md: это подготовка ДО посадки, не по ходу записи.\n`
+  out += `---\n\n## Чистый лист — обнулить состояние продукта ДО дубля\n\n`
+  out += `Дубль снимается с чистой машины, как будто продукт видишь впервые. Прогони это ПЕРЕД\n`
+  out += `записью — иначе кадры первого запуска (диалоги, онбординг) уже не воспроизведутся.\n\n`
+  if (repro.cleanSlate) out += `${repro.cleanSlate}\n\n`
+  else out += `_(в REPRO.md нет ## Clean slate — уточни у review-фазы, что и где чистить)_\n\n`
+
+  if (repro.envCaveats) {
+    out += `---\n\n## ⚠️ ОДИН ДУБЛЬ — только первый прогон\n\n`
+    out += `Эти кадры существуют лишь в первом прогоне с чистого листа — со второго дубля их не снять.\n\n`
+    out += `${repro.envCaveats}\n`
+  }
+
+  if (repro.preparedStates) {
+    out += `\n---\n\n## Заготовки — только вне кадра\n\n`
+    out += `Экономят время ДО записи (скачать модели заранее и т.п.). Показать в кадре как обход шага,\n`
+    out += `который пользователь бы не пропустил, — НЕЛЬЗЯ.\n\n`
+    out += `${repro.preparedStates}\n`
+  }
 
   let beat = ''
   for (const b of blocks) {
@@ -146,9 +163,8 @@ function buildRecording(
     out += `${b.body}\n`
   }
 
-  if (repro.failureRecipes) {
-    out += `\n---\n\n## Failure recipes\n\n${repro.failureRecipes}\n`
-  }
+  // No trailing "Failure recipes" section: under the linear-take doctrine a break is not an
+  // isolated setup — it happens live inside the flow, at the step where a stubborn user hits it.
   return { md: out, report, scenes: blocks.length }
 }
 

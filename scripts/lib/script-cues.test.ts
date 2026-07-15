@@ -217,4 +217,15 @@ describe('validateScript', () => {
     const badMeme = MINI.replace('[МЕМ M1:', '[МЕМ M2:')
     expect(validateScript(parseScript(badMeme), scenes).join('\n')).toMatch(/МЕМ/)
   })
+
+  it('rejects REPRO anchors that do not ascend along the flow (linear-take doctrine)', () => {
+    // Same set as [1,2,3] so the bijection passes — only the ORDER is wrong. Under the linear-take
+    // doctrine narrative order = shooting order, so the flow must read 1→2→3 top to bottom.
+    const errors = validateScript(parseScript(MINI), [2, 1, 3])
+    expect(errors.join('\n')).toMatch(/по возрастанию вдоль потока/)
+  })
+
+  it('accepts ascending anchors', () => {
+    expect(validateScript(parseScript(MINI), [1, 2, 3])).toEqual([])
+  })
 })

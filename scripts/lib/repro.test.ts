@@ -8,12 +8,35 @@ const here = dirname(fileURLToPath(import.meta.url))
 const MINI = readFileSync(join(here, '..', '__fixtures__', 'repro-mini.md'), 'utf8')
 
 describe('parseRepro', () => {
-  it('reads the scene number off the anchor, not off the position in the file', () => {
+  it('gathers <a id="scene-N"> anchors doc-wide — across ## User flow AND ## Evidence inserts', () => {
+    // scene-1/2 live under ## User flow, scene-3 under ## Evidence inserts; all three parse.
     const { scenes } = parseRepro(MINI)
     expect(scenes.map((s) => s.num)).toEqual([1, 2, 3])
   })
 
-  it('reads each scene title and beat', () => {
+  it('reads the scene number off the anchor, not off the physical order of the blocks', () => {
+    // A REPRO whose anchors are physically out of order is doctrine-INVALID (the monotonic guard in
+    // validateScript rejects it), but parseRepro itself is order-agnostic: the number always comes
+    // off the anchor, so an out-of-order file still maps each block to its true N.
+    const ooo = [
+      '## User flow',
+      '',
+      '<a id="scene-2"></a>',
+      '### FLOW 2 — второй  ·  _beat: Live_',
+      '- **Do:** TWO',
+      '',
+      '<a id="scene-1"></a>',
+      '### FLOW 1 — первый  ·  _beat: Live_',
+      '- **Do:** ONE',
+      '',
+    ].join('\n')
+    const { scenes } = parseRepro(ooo)
+    expect(scenes.map((s) => s.num)).toEqual([2, 1]) // physical order preserved, nums off the anchors
+    expect(scenes[0].title).toBe('второй')
+    expect(scenes[1].title).toBe('первый')
+  })
+
+  it('reads each scene title and beat, whatever the header word (FLOW / EVIDENCE)', () => {
     const [s1, , s3] = parseRepro(MINI).scenes
     expect(s1.title).toBe('витрина репы')
     expect(s1.beat).toBe('Хук')
@@ -21,10 +44,15 @@ describe('parseRepro', () => {
     expect(s3.beat).toBe('Живой тест')
   })
 
-  it('splits a scene into labelled bullets', () => {
+  it('splits a flow step into labelled bullets', () => {
     const s1 = parseRepro(MINI).scenes[0]
     expect(s1.bullets.map((b) => b.label)).toEqual(['Do', 'On screen', 'Wait/Cut', 'Reset'])
     expect(s1.bullets[0].body).toContain('открыть `https://github.com/o/r`')
+  })
+
+  it('does not let an evidence block bleed into the following ## Environment caveats section', () => {
+    const s3 = parseRepro(MINI).scenes[2]
+    expect(s3.bullets.map((b) => b.body).join('\n')).not.toContain('только в первом прогоне')
   })
 
   it('keeps a fenced code block inside its bullet, verbatim', () => {
@@ -49,27 +77,30 @@ describe('parseRepro', () => {
     expect(s3.bullets.find((b) => b.label === 'Do')!.mark).toBe('')
   })
 
-  it('carries an extra bullet (e.g. Failure recipe) through', () => {
-    const s2 = parseRepro(MINI).scenes[1]
-    expect(s2.bullets.map((b) => b.label)).toContain('Failure recipe')
+  it('carries an evidence insert’s Anchor bullet through', () => {
+    // The Anchor bullet ("сразу после шага 2 …") tells the host WHERE in the flow the proof goes.
+    const s3 = parseRepro(MINI).scenes[2]
+    const anchor = s3.bullets.find((b) => b.label === 'Anchor')!
+    expect(anchor.body).toContain('после того как Gatekeeper показал диалог')
   })
 
-  it('captures the time budget, prepared states, scenes preamble and failure recipes', () => {
+  it('captures the time budget, clean slate, env caveats and (off-camera) prepared states', () => {
     const d = parseRepro(MINI)
-    expect(d.timeBudget).toBe('~30 мин на 3 сцены, если модели скачаны заранее.')
-    expect(d.preparedStates).toContain('READY-DMG')
-    expect(d.preparedStates).toContain('флага карантина НЕТ')
-    expect(d.scenesPreamble).toContain('Сцену 2 снимай ПЕРВОЙ')
-    expect(d.failureRecipes).toContain('DMG не нотаризован')
-    expect(d.failureRecipes).toContain('xattr -w com.apple.quarantine')
+    expect(d.timeBudget).toBe('~30 мин на весь линейный дубль, если модели скачаны заранее.')
+    expect(d.cleanSlate).toContain('rm -rf ~/Library/Application')
+    expect(d.cleanSlate).toContain('com.apple.quarantine')
+    expect(d.envCaveats).toContain('только в первом прогоне')
+    expect(d.envCaveats).toContain('Gatekeeper')
+    expect(d.preparedStates).toContain('МОДЕЛИ')
+    expect(d.preparedStates).toContain('скачаны заранее')
   })
 
   it('does not leak HTML comments into any parsed section', () => {
     const d = parseRepro(MINI)
-    expect(d.preparedStates + d.scenesPreamble + d.failureRecipes).not.toContain('<!--')
+    expect(d.cleanSlate + d.envCaveats + d.preparedStates).not.toContain('<!--')
   })
 
   it('returns empty scenes for a REPRO with no anchors yet', () => {
-    expect(parseRepro('# REPRO\n\n## Scenes\n\nничего ещё нет\n').scenes).toEqual([])
+    expect(parseRepro('# REPRO\n\n## User flow\n\nничего ещё нет\n').scenes).toEqual([])
   })
 })

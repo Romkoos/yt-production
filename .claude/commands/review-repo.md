@@ -148,40 +148,47 @@ Fill in **every** section — do not leave any as the template's placeholder tex
 
 ---
 
-## Step 6 — Write the reproduction protocol (SETUP + failures)
+## Step 6 — Write the reproduction protocol (the linear user flow)
 
-The host must be able to **record the episode without understanding the repo internals**.
-That path lives in `episodes/<ep>/REPRO.md`. Copy the template and fill the parts you can
-already know from the sandbox and `report.md` — the per-scene blocks come later, in
-`/script` (there is no `script.md` yet):
+The host records **the user's path, live, in one continuous linear take on a clean machine
+state** — the steps a real user would take, in the order they'd take them (read the
+**Recording doctrine** in `CLAUDE.md`). You just walked that path in the sandbox, so you write
+it. It lives in `episodes/<ep>/REPRO.md`:
 
 ```bash
 cp templates/REPRO.md episodes/<ep>/REPRO.md
 ```
 
-Fill these sections now:
+Fill these sections now (the `[СКРИНКАСТ #N]` cues that reference them come later, in `/script`):
 
-- **`## Prepared states`** — list ready-to-record states left in the sandbox so no take
-  waits on a long install/build/test (e.g. deps already installed, packages already
-  built — name each and which work it saves). If a scene will need a **clean** state (the
-  install take), say how to get one without destroying the built state (a second clone),
-  so recording order isn't forced. **Rule of thumb:** materialize a prepared state (a
-  second pre-built clone) only when a scene's natural wait exceeds ~2 minutes; otherwise
-  just document the recipe (a 12-second reinstall doesn't warrant a duplicate clone).
-- **`## SETUP — zero to running`** — exact copy-paste commands from a clean clone to a
-  running project, using the flags that **actually worked** (e.g. `--ignore-scripts`), the
-  env vars (or "none"), and for **each step** an expected duration + a success indicator
-  to watch for (`~40s, ends with "ready on :3000"`). Write the workarounds you discovered,
-  not the README's version.
-- **`## Failure recipes`** — the interesting breakages from the report's «Сломалось», each
-  with the exact trigger command(s) and the exact error text shown. If a failure was
-  flaky / environment-dependent, say so explicitly and mark it "capture from agent test
-  logs instead" rather than pretending it reproduces on demand.
+- **`## Clean slate`** — exact commands to wipe **all** prior state of the product on the
+  recording machine so the take starts as a real first-time user: app data / config, downloads,
+  quarantine caches, any sandbox traces on the recording path. **You must have discovered during
+  the run WHERE the product leaves state** — write the wipe accordingly. A first-run dialog or
+  onboarding that won't fire on a machine that has already seen the product is exactly what this
+  prevents. State env vars to reset (or "none").
+- **`## User flow`** — the numbered linear path a real user walks (download in browser → install
+  → first run → onboarding → core usage). One `<a id="scene-N"></a>` + `### FLOW N` block per step,
+  **in order**, each with what the user **does** and what they **see**. Where the README's own
+  instructions **break**, the step **says so and continues the way a stubborn user would** — the
+  break happens live, here, not as a separate "failure recipe". Number the anchors in flow order;
+  flow order **is** shooting order.
+- **`## Evidence inserts`** — the proofs (`spctl` / `lsof` / `strings` / `git log` …) that turn a
+  suspicion into a shown fact. Each gets its own `<a id="scene-N"></a>` + `### EVIDENCE N` block and
+  an **`Anchor`** bullet naming the flow step it's woven into («сразу после того как Gatekeeper
+  показал диалог»). **Carry the honesty-scoping notes over as-is** — the `⚠️ **Чего этот вывод НЕ
+  доказывает:**` bullet is load-bearing.
+- **`## Environment caveats`** — every **one-shot moment** you can identify: things that behave
+  differently on a machine that has already seen the product (e.g. Gatekeeper caching its verdict,
+  so the block dialog is unreproducible after the first Open). Flag each: «этот кадр существует
+  только в первом прогоне». `RECORDING.md` surfaces these as ⚠️ ОДИН ДУБЛЬ.
+- **`## Prepared states`** (optional) — only **off-camera** time savings (e.g. model weights
+  pre-downloaded so a take doesn't wait on a long pull). **Never** something shown in frame as a
+  shortcut a real user wouldn't take. Omit the section if there's nothing to prepare.
 
-Leave the **`## Scenes`** section as the template stub and the **Recording time budget**
-placeholder — `/script` fills them (one SCENE block per `[СКРИНКАСТ]` cue). Same honesty
-rule as `report.md`: every command, duration, and success indicator must be what actually
-happened in the sandbox — never the README's claim or an invented value.
+Leave the **Recording time budget** placeholder — `/script` fills it. Same honesty rule as
+`report.md`: every command, duration, and on-screen result must be what actually happened in the
+sandbox — never the README's claim or an invented value.
 
 ---
 
@@ -192,7 +199,7 @@ Edit `episodes/<ep>/STATE.md`:
 - Frontmatter: set `current_phase: review` and `phase_status: done`. Set
   `updated:` to today's date (`YYYY-MM-DD`).
 - `## Artifacts`: update the `report.md` line to show it's present (e.g.
-  `report.md: present`), the `REPRO.md` line to `REPRO.md: present (setup + failures; scenes pending /script)`,
+  `report.md: present`), the `REPRO.md` line to `REPRO.md: present (clean slate + user flow + evidence + caveats; #СКРИНКАСТ cues pending /script)`,
   and update the `sandbox/` line to point at the cloned path
   (e.g. `sandbox/: episodes/<ep>/sandbox/<repo>`).
 - `## Next action`: replace it with `Run /script`.
@@ -259,10 +266,10 @@ already be migrated (`pnpm db:migrate`) — run that first if the tables don't e
 ## Output contract / side-effects
 
 This command writes **only**:
-- Inside `episodes/<ep>/` — the new/updated `STATE.md`, `report.md`, `REPRO.md` (SETUP +
-  Prepared states + Failure recipes; scene blocks filled later by `/script`), and
-  everything under `episodes/<ep>/sandbox/` (the cloned repo and anything it produces
-  while running).
+- Inside `episodes/<ep>/` — the new/updated `STATE.md`, `report.md`, `REPRO.md` (clean slate +
+  user flow + evidence inserts + environment caveats + optional prepared states; the
+  `[СКРИНКАСТ #N]` cues are added later by `/script`), and everything under
+  `episodes/<ep>/sandbox/` (the cloned repo and anything it produces while running).
 - `db/tracker.sqlite` — the episode row (if new) and one new `phaseMetrics` row.
 
 Nothing is installed or written globally, nothing outside `episodes/<ep>/` and
