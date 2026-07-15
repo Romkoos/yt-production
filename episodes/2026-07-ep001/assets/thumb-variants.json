@@ -1,0 +1,56 @@
+[
+  {
+    "label": "A-army-logo-right",
+    "props": {
+      "repoName": "stablyai/orca",
+      "verdict": "ГОДНОТА",
+      "hook": [
+        { "text": "*АРМИЯ*", "size": "xl" },
+        { "text": "AI-АГЕНТОВ", "size": "xl" }
+      ],
+      "logo": { "glyph": ">_" },
+      "layout": "logo-right",
+      "verdictPosition": "in-brick",
+      "accent": "#F5A623",
+      "bgImage": "gen/2026-07-ep001/scene-real-avatar-v1.png",
+      "objectInScene": true
+    }
+  },
+  {
+    "label": "B-stars-logo-right",
+    "props": {
+      "repoName": "stablyai/orca",
+      "verdict": "ГОДНОТА",
+      "hook": [
+        { "text": "+5724", "size": "xl" },
+        { "text": "ЗВЁЗДЫ ЗА", "size": "md" },
+        { "text": "*НЕДЕЛЮ*", "size": "xl" }
+      ],
+      "logo": { "glyph": ">_" },
+      "layout": "logo-right",
+      "verdictPosition": "in-brick",
+      "accent": "#F5A623",
+      "bgImage": "gen/2026-07-ep001/scene-real-avatar-v1.png",
+      "objectInScene": true
+    }
+  },
+  {
+    "label": "C-pod-logo-hero",
+    "props": {
+      "repoName": "stablyai/orca",
+      "verdict": "ГОДНОТА",
+      "hook": [
+        { "text": "ЦЕЛАЯ", "size": "xl" },
+        { "text": "*СТАЯ*", "size": "xl" },
+        { "text": "АГЕНТОВ", "size": "xl" }
+      ],
+      "logo": { "glyph": ">_" },
+      "layout": "logo-hero",
+      "verdictPosition": "top-right",
+      "hookLineHeight": 0.9,
+      "accent": "#F5A623",
+      "bgImage": "gen/2026-07-ep001/scene-real-avatar-v1.png",
+      "objectInScene": true
+    }
+  }
+]
