@@ -127,4 +127,11 @@ function main(): void {
   }
 }
 
-main()
+try {
+  main()
+} catch (e) {
+  // Zero episodes (or no thumb-variants.json anywhere) is a normal state, not a crash: pickEpisode
+  // throws an honest "no episode has a thumb-variants.json" here. Surface it cleanly, no stack trace.
+  process.stderr.write(`[thumbs] ${(e as Error).message}\n`)
+  process.exit(1)
+}

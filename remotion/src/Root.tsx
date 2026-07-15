@@ -3,9 +3,25 @@ import { StarChart } from './StarChart'
 import { Intro } from './Intro'
 import { VerdictCard } from './VerdictCard'
 import { ThumbTemplate } from './ThumbTemplate'
-import { thumbSchema } from './thumb-schema'
-import { THUMB_PRESETS, THUMB_ASTRYX_A } from './thumb-presets'
+import { thumbSchema, type ThumbTemplateProps } from './thumb-schema'
 import { TEST_STARCHART } from './starchart-data'
+
+// Generic placeholder props for the ThumbTemplate Studio composition. Glyph-only focal object (no
+// image file), neutral repo/hook — episode-specific presets are generated per episode, not baked in.
+const THUMB_DEFAULT: ThumbTemplateProps = {
+  layout: 'logo-right',
+  accent: '#58a6ff',
+  repoName: 'org/repo',
+  verdict: 'ГОДНОТА',
+  verdictPosition: 'in-brick',
+  logo: { glyph: '>_' },
+  hookBlock: true,
+  hookFont: 'unbounded',
+  hook: [
+    { text: 'Заголовок', size: 'md', weight: 700 },
+    { text: 'хук', size: 'xl', accent: true },
+  ],
+}
 
 export const RemotionRoot: React.FC = () => (
   <>
@@ -36,7 +52,7 @@ export const RemotionRoot: React.FC = () => (
       height={1080}
       defaultProps={{ verdict: 'ГОДНОТА', repoName: 'facebook/astryx' }}
     />
-    {/* Generic composition (default props = variant A) for future episodes / studio. */}
+    {/* Generic composition (glyph-only placeholder props) for future episodes / studio. */}
     <Composition
       id="ThumbTemplate"
       component={ThumbTemplate}
@@ -45,21 +61,7 @@ export const RemotionRoot: React.FC = () => (
       fps={30}
       width={1280}
       height={720}
-      defaultProps={THUMB_ASTRYX_A}
+      defaultProps={THUMB_DEFAULT}
     />
-    {/* ep001 presets — three genuinely different compositions, rendered as stills. */}
-    {Object.entries(THUMB_PRESETS).map(([id, props]) => (
-      <Composition
-        key={id}
-        id={id}
-        component={ThumbTemplate}
-        schema={thumbSchema}
-        durationInFrames={1}
-        fps={30}
-        width={1280}
-        height={720}
-        defaultProps={props}
-      />
-    ))}
   </>
 )

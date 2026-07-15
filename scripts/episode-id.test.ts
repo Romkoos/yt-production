@@ -30,4 +30,7 @@ describe('nextEpisodeId', () => {
   it('combines next number with the given year-month', () => {
     expect(nextEpisodeId(['2026-07-ep001'], '2026-08')).toBe('2026-08-ep002')
   })
+  it('yields ep001 over an empty episodes/ (numbering starts at #1)', () => {
+    expect(nextEpisodeId([], '2026-07')).toBe('2026-07-ep001')
+  })
 })

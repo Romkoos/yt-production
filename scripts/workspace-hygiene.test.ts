@@ -75,6 +75,5 @@ describe('generated-asset ignore rules', () => {
     expect(isIgnored('remotion/public/branding/logo.svg')).toBe(false)
     expect(isIgnored('remotion/public/branding/logo-nobg.svg')).toBe(false)
     expect(isIgnored('remotion/public/fonts/montserrat-latin-700-normal.woff2')).toBe(false)
-    expect(isIgnored('remotion/public/thumb/logo-facebook.png')).toBe(false)
   })
 })
