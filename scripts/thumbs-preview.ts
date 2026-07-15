@@ -69,9 +69,9 @@ function main(): void {
   // depends on the brick's measured glyph widths, and Node has no canvas. Surfacing it means moving
   // this script off the `npx remotion still` CLI and onto @remotion/renderer's renderStill(), which
   // takes an onBrowserLog callback and would forward the component's console.warn to this terminal.
-  // DEFERRED ON PURPOSE: the shrink has never fired — the tightest ep001 variant clears the lockup
-  // by +131px — and building the plumbing for a warning nobody has needed yet is speculative. Do it
-  // the first time a real render actually shrinks a badge.
+  // DEFERRED ON PURPOSE: the shrink has never fired — the tightest variant rendered so far still
+  // cleared the lockup with room to spare — and building the plumbing for a warning nobody has
+  // needed yet is speculative. Do it the first time a real render actually shrinks a badge.
   for (const w of [...blockWidthWarnings(variants), ...sceneObjectWarnings(variants)]) {
     process.stdout.write(`  ! ${w}\n`)
   }

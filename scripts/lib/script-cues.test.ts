@@ -9,7 +9,7 @@ const fixture = (name: string) => readFileSync(join(here, '..', '__fixtures__', 
 
 // Frozen snapshots — decoupled from the live episode files, which the host WILL edit.
 const MINI = fixture('script-mini.md')
-const LEGACY = fixture('script-ep001.md') // pre-#N script, no IDs anywhere
+const LEGACY = fixture('script-legacy.md') // pre-#N script, no IDs anywhere
 
 describe('parseScript — cue identity', () => {
   it('reads the ID off every cue kind and ignores the legend comment block', () => {

@@ -69,7 +69,7 @@ writes **`bgImage` + `objectInScene: true` into every variant** of
 ```
 ✓ scene-real-avatar-v3.png   (gemini-3-pro-image-preview, ~$0.13 — estimate, prices as of 2026-07-13)
 
-Applied → episodes/2026-07-ep001/assets/thumb-variants.json
+Applied → episodes/2026-07-epNNN/assets/thumb-variants.json
   ✓ A — clean right: bgImage …scene-real-avatar-v2.png → …scene-real-avatar-v3.png
   ✓ B — hero: bgImage → …scene-real-avatar-v3.png, objectInScene → true
 

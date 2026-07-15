@@ -53,7 +53,7 @@ All files are Russian text, git-tracked. Create the directory if missing.
   - A **channel-boilerplate placeholder** (subscribe line / socials — the channel has no name
     yet, so leave a clearly marked `<!-- channel boilerplate: заполнить -->` block).
 - **`tags.txt`** — a comma- or newline-separated tag list: channel niche (разбор репозиториев,
-  open source, обзор) + repo topics (e.g. дизайн-система, React, StyleX). One coherent set.
+  open source, обзор) + repo topics (e.g. дизайн-система, React, TypeScript). One coherent set.
 - **`shorts-pitches.md`** — one line per `[SHORT cut S<n>]` candidate in `script.md`. Enumerate
   them with the tested parser, then write a one-line pitch (the hook of that Short) per beat.
   Carry each cue's **ID** (`S1`, `S2`…) into the file — `VOICE.md`'s margin notes reference the
@@ -61,7 +61,7 @@ All files are Russian text, git-tracked. Create the directory if missing.
   ```bash
   node --import tsx -e "import {parseScript} from './scripts/lib/script-cues.ts'; import {readFileSync} from 'node:fs'; for (const c of parseScript(readFileSync('episodes/<ep>/script.md','utf8')).cues.filter(c => c.kind === 'short')) console.log(c.id+' ['+c.beat+'] '+c.raw)"
   ```
-  (An episode predating the ID scheme — ep001 — has no `S<n>` tags; `c.id` is empty there and the
+  (An episode predating the ID scheme — a legacy episode — has no `S<n>` tags; `c.id` is empty there and the
   pitches simply carry no ID.)
 
 ---

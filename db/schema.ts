@@ -1,7 +1,7 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
 
 export const episodes = sqliteTable('episodes', {
-  id: text('id').primaryKey(), // e.g. 2026-07-ep001
+  id: text('id').primaryKey(), // e.g. 2026-07-epNNN
   number: integer('number').notNull(), // channel-wide sequential
   repoUrl: text('repo_url').notNull(),
   title: text('title'),

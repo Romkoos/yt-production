@@ -2,7 +2,7 @@ import { staticFile, delayRender, continueRender, cancelRender } from 'remotion'
 
 // Bundled woff2 faces under public/fonts/ (Cyrillic + Latin subsets, from fontsource).
 // Loaded locally so headless renders are deterministic and offline — no fetch-at-render
-// dependency on Google Fonts. Scripts mix Cyrillic (ГОДНОТА) and Latin (astryx, StyleX),
+// dependency on Google Fonts. Scripts mix Cyrillic (ГОДНОТА) and Latin (repo names, code identifiers),
 // hence both subsets for every family. The channel has Cyrillic-heavy on-screen text; a font
 // that can't draw it renders tofu boxes in the final video.
 //

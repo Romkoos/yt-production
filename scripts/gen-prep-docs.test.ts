@@ -10,7 +10,7 @@ const fixture = (name: string) => readFileSync(join(here, '__fixtures__', name),
 
 const SCRIPT = fixture('script-mini.md')
 const REPRO = fixture('repro-mini.md')
-const LEGACY = fixture('script-ep001.md')
+const LEGACY = fixture('script-legacy.md')
 
 describe('writePrepDocs', () => {
   let dir: string

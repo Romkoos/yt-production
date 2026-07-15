@@ -50,7 +50,7 @@ export const RemotionRoot: React.FC = () => (
       fps={30}
       width={1920}
       height={1080}
-      defaultProps={{ verdict: 'ГОДНОТА', repoName: 'facebook/astryx' }}
+      defaultProps={{ verdict: 'ГОДНОТА', repoName: 'org/repo' }}
     />
     {/* Generic composition (glyph-only placeholder props) for future episodes / studio. */}
     <Composition

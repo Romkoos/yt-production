@@ -125,7 +125,7 @@ This writes the two **session-oriented** docs — one file drives one sitting:
 
 `pnpm prep` **hard-fails and writes nothing** if `script.md` and `REPRO.md` disagree (a `#N` with
 no `#scene-N` block, or an orphan block with no cue) — the IDs are the contract between them. An
-episode written before the ID scheme (ep001) is detected as legacy: `pnpm prep` skips it with a
+episode written before the ID scheme is detected as legacy: `pnpm prep` skips it with a
 message and exits 0.
 
 Re-running is safe: RECORDING/VOICE are regenerated, and ticked scene boxes are carried over **by
