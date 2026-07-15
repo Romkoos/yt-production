@@ -65,10 +65,12 @@ per-episode file, `episodes/<ep>/assets/thumb-variants.json` — an array of `{ 
 where `props` is a full `ThumbTemplate` prop object (`repoName`, `verdict`, the styled `hook`
 lines, `logo`, `layout`, optional `accent`/`glowColor`/`logoScale`/`texture` — validated against
 `thumbSchema` at render time). If the file is missing, create it (2–3 variants, hook lines drawn
-from the script's hook / `THUMB_HOOKS.md`, `verdict` = this episode's verdict). Then render the
-contact sheet — this is the **final step of `/assets`**:
+from the script's hook / `THUMB_HOOKS.md`, `verdict` = this episode's verdict). Then generate the
+**mandatory generative logo background** (see the REQUIRED rule below) and render the contact sheet —
+together these are the **final step of `/assets`**:
 
 ```bash
+pnpm scene  -- --episode <ep>   # REQUIRED — bakes the repo logo into a generated background (rule below)
 pnpm thumbs -- --episode <ep>
 ```
 
@@ -87,13 +89,24 @@ the *focal* centre tile, not in the header. Caveat before implementing: the avat
 focal object, so a second copy in the header may read as redundant — decide per layout (a small
 monochrome/rounded header mark can still help brand-vs-repo legibility). Not yet wired to a prop.
 
-**Generative backgrounds (optional).** `/gen-thumb-object` generates a focal object or a full
-background scene with the Gemini image API. Generated **scenes** are mirrored to
-`remotion/public/gen/<ep>/` and feed `ThumbTemplate`'s `bgImage` prop. `pnpm scene` (= `--scene
---apply`) writes `bgImage` + `objectInScene: true` into every variant of `thumb-variants.json`
-itself, so the whole leg is **`pnpm scene && pnpm thumbs`** — no copy-paste. It is BILLED (~$0.13);
-`pnpm scene:dry` prints the exact prompt for free. Generated **objects** are archived but not yet
-consumed: the `ThumbTemplate` object layer is a follow-up.
+**Generative background with the repo logo — REQUIRED (host rule).** Every thumbnail variant MUST
+ship on a generative background with the repo's real logo baked in — never a flat/empty background,
+never the bare `>_` glyph as the only focal mark. Run `pnpm scene`
+(= `/gen-thumb-object --mode real-avatar --scene --apply`) **before** `pnpm thumbs`: it fetches the
+repo owner avatar (`github.com/<owner>.png`), generates ONE scene via the Gemini image API (accent =
+verdict palette), mirrors it to `remotion/public/gen/<ep>/`, and writes `bgImage` +
+`objectInScene: true` into every variant of `thumb-variants.json`. One shared scene → the logo sits
+in the same place across all variants (this is what keeps a `logo-hero`/`logo-right` set consistent).
+It is BILLED (~$0.13); preview the exact prompt for free first with `pnpm scene:dry`.
+
+**If there is NO usable repo logo — STOP and ask the host.** When the owner avatar can't be fetched,
+or resolves to a generic GitHub identicon with no real brand mark, do **not** silently fall back to a
+plain background or the glyph. Surface it and decide together: `--mode known-logo` with a brand the
+host names, a supplied logo file, or a no-logo background as an **explicit, host-approved exception**.
+A logo-less thumbnail is never the default.
+
+Generated **objects** (non-scene) are archived but not yet consumed: the `ThumbTemplate` object
+layer is a follow-up.
 
 Generated images never contain text (thumbnail text is always a programmatic render) and never
 carry a fabricated brand mark — see `/gen-thumb-object` for the per-mode guarantees and the
@@ -144,11 +157,11 @@ never silently remapped. `--force` discards all tick state.
 - `## Artifacts`: set the `assets/` line to list the rendered files + prep docs present.
 - `## Next action`: replace with the **manual-phase prep checklist**:
   ```
-  Manual phase — подготовка к записи:
+  Manual phase — подготовка к записи (порядок обязателен — ГОЛОС строго ПОСЛЕ съёмки):
+  - [ ] Пре-флайт / чистый лист: пройти REPRO.md SETUP с нуля, свериться с prepared states
   - [ ] Музыка: сгенерировать трек в Suno
-  - [ ] Голос: записать озвучку по VOICE.md (хук и вердикт — наизусть)
   - [ ] Скринкаст: снять по RECORDING.md (команды/что на экране/WAIT-CUT — всё внутри)
-  - [ ] Проверка REPRO.md: пройти SETUP с нуля, свериться с prepared states
+  - [ ] Голос: записать озвучку по VOICE.md ⚠️ строго ПОСЛЕ съёмки — вердикт и свидетельства существуют только после дубля (хук наизусть)
   - [ ] Мемы и звуки: скачать по assets/MEME_LIST.md
   - [ ] Монтаж в DaVinci Resolve
   - [ ] Сверка таймкодов: записать реальные таймкоды в STATE.md/script.md
@@ -171,14 +184,18 @@ which scenes rendered).
 
 Writes **only**:
 - `episodes/<ep>/assets/` — `StarChart.mp4`, `Intro.mp4`, `VerdictCard.mp4`, `MEME_LIST.md`,
-  `thumb-variants.json` (tracked render source), the gitignored `star-history.raw.json` /
-  `StarChart.props.json` cache, and `preview/` (the gitignored thumbnail contact sheet:
-  `thumb-vN.png`, `thumb-vN.120.png`, `index.html`).
+  `thumb-variants.json` (tracked render source — now also carries `bgImage` + `objectInScene` from
+  the mandatory scene step), `gen-log.json` (tracked, append-only audit of every generation), the
+  cached repo avatar (`logo-<owner>.png`), the gitignored `star-history.raw.json` /
+  `StarChart.props.json` cache, the gitignored `gen/` scene archive, and `preview/` (the gitignored
+  thumbnail contact sheet: `thumb-vN.png`, `thumb-vN.120.png`, `index.html`).
+- `remotion/public/gen/<ep>/` — the gitignored render-surface mirror of the generated scene(s).
 - `episodes/<ep>/RECORDING.md` and `episodes/<ep>/VOICE.md` — new files (derived, regenerable).
 - `episodes/<ep>/STATE.md` — updated in place (assets phase fields only).
 - `db/tracker.sqlite` — one new `phaseMetrics` row.
 
-Rendered media (`*.mp4`, `*.png`, `*.json`) is gitignored — EXCEPT `thumb-variants.json`, which is
-tracked (it is the editable source for the thumbnail loop, not a render output); text prep docs
-(`MEME_LIST.md`, `RECORDING.md`, `VOICE.md`) are tracked. The only network access is the
-star-history fetch (read-only GitHub API); no third-party repo code is executed.
+Rendered media (`*.mp4`, `*.png`, `*.json`) is gitignored — EXCEPT `thumb-variants.json` and
+`gen-log.json`, which are tracked (the editable thumbnail source and the generation audit trail); text
+prep docs (`MEME_LIST.md`, `RECORDING.md`, `VOICE.md`) are tracked. Network access: the star-history
+fetch (read-only GitHub API), the repo-avatar fetch, and the Gemini image API (the billed scene
+generation). No third-party repo code is executed.
