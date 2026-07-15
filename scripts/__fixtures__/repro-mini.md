@@ -3,47 +3,43 @@
 <!-- ownership comment that must not leak into the parsed output -->
 
 **Repo:** https://github.com/o/r  ·  **Verdict:** ХАЙП  ·  **Sandbox:** `episodes/ep-mini/sandbox/r`
-**Recording time budget:** ~30 мин на 3 сцены, если модели скачаны заранее.
+**Recording time budget:** ~30 мин на весь линейный дубль, если модели скачаны заранее.
 
 ---
 
-## Prepared states
-
-- **READY-APP** — `sandbox/run/app` — распаковано, запускается напрямую.
-- **READY-DMG** — `sandbox/dist/app.dmg` — скачан через `gh`, флага карантина НЕТ.
-
----
-
-## SETUP — zero to running (copy-paste)
+## Clean slate
 
 ```bash
-# 1. Скачать релиз — ~10s, success: файл на диске
-gh release download v1 --repo o/r --dir dist
+# стереть следы продукта на машине записи — ДО дубля
+rm -rf ~/Library/Application\ Support/r ~/Downloads/app.dmg
+xattr -d com.apple.quarantine ~/Downloads/* 2>/dev/null || true
 ```
 
 ---
 
-## Scenes  <!-- one block per [СКРИНКАСТ] cue; script #N → #scene-N -->
-
-⚠️ **Сцену 2 снимай ПЕРВОЙ по времени** — только браузер ставит флаг карантина.
+## User flow
 
 <a id="scene-1"></a>
-### SCENE 1 — витрина репы  ·  _beat: Хук_
+### FLOW 1 — витрина репы  ·  _beat: Хук_
 - **Do:** открыть `https://github.com/o/r`, навести на строку описания.
 - **On screen:** строка описания с тремя обещаниями + «20k stars».
 - **Wait/Cut:** — (статичная страница)
 - **Reset:** — (идемпотентно)
 
 <a id="scene-2"></a>
-### SCENE 2 — Gatekeeper блокирует установку  ·  _beat: Живой тест_
-- **Do:** скачать dmg **браузером** → двойной клик в Finder.
+### FLOW 2 — качаем и ставим: Gatekeeper блокирует  ·  _beat: Живой тест_
+- **Do:** скачать dmg **в браузере** (не через gh — иначе не будет флага карантина) → двойной клик в Finder. Первый же шаг README не срабатывает.
 - **On screen:** диалог macOS о том, что образ не может быть проверен.
 - **Wait/Cut:** — (срабатывает мгновенно)
-- **Reset:** файл должен сохранить флаг карантина.
-- **Failure recipe:** см. «DMG не нотаризован» ниже.
+- **Reset:** пере-скачать в браузере, чтобы вернуть флаг карантина.
+
+---
+
+## Evidence inserts
 
 <a id="scene-3"></a>
-### SCENE 3 — приложение нотаризовано, коробка нет  ·  _beat: Живой тест_
+### EVIDENCE 3 — приложение нотаризовано, коробка нет  ·  _beat: Живой тест_
+- **Anchor:** сразу после того как Gatekeeper показал диалог (шаг 2) — доказываем, что нотаризован не образ.
 - **Do:**
   ```bash
   spctl -a -vvv /Volumes/r/app.app
@@ -51,16 +47,18 @@ gh release download v1 --repo o/r --dir dist
   ```
 - **On screen:** `accepted / Notarized` и `rejected / Unnotarized` в одном кадре.
 - **Wait/Cut:** — (мгновенно). Оба вывода должны попасть в один кадр.
-- **Reset:** — (идемпотентно)
 - ⚠️ **Чего этот вывод НЕ доказывает:** что подписана сама коробка — проверяем ровно две вещи.
 
 ---
 
-## Failure recipes
+## Environment caveats
 
-- **DMG не нотаризован → Gatekeeper блокирует установку** — детерминированно:
+- **Диалог блокировки Gatekeeper** — существует только в первом прогоне: после первого «Открыть» macOS кэширует вердикт и блок больше не показывается. Снять на чистом листе, один дубль.
 
-  ```bash
-  xattr -w com.apple.quarantine "0083;0;Safari;" quarantined.dmg
-  spctl -a -vvv -t open quarantined.dmg
-  ```
+---
+
+## Prepared states
+
+<!-- off-camera only -->
+
+- **МОДЕЛИ** — `~/.cache/r/models` — веса скачаны заранее (~4 ГБ), чтобы дубль не ждал загрузку. В кадре не показываем.

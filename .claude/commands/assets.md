@@ -109,12 +109,14 @@ pnpm prep -- --episode <ep>
 
 This writes the two **session-oriented** docs — one file drives one sitting:
 
-- `episodes/<ep>/RECORDING.md` — the **screencast session**. A checkbox per `[СКРИНКАСТ #N]` cue,
-  grouped by beat, with REPRO's exact commands / on-screen / WAIT-CUT / reset **inlined**, plus a
-  back-reference to the voice beat the scene plays under (`Звучит под: «…»` — the tail of the
-  preceding voice run, i.e. what the host hears as the scene cuts in). Pre-flight (prepared states)
-  at the top, failure recipes verbatim at the bottom. **No cross-file jump is needed mid-session** —
-  `REPRO.md` stays the source of truth; `RECORDING.md` is disposable.
+- `episodes/<ep>/RECORDING.md` — the **linear shooting run** (one continuous take, top to bottom).
+  A checkbox per `[СКРИНКАСТ #N]` cue in flow order, grouped by beat, with REPRO's exact commands /
+  on-screen / WAIT-CUT / reset **inlined** and the evidence inserts woven in at their anchor points,
+  plus a back-reference to the voice beat the scene plays under (`Звучит под: «…»` — the tail of the
+  preceding voice run, i.e. what the host hears as the scene cuts in). The **`## Чистый лист` wipe
+  checklist** is on top, one-shot moments are flagged **`## ⚠️ ОДИН ДУБЛЬ`**, and any off-camera
+  prepared states are demoted to a `## Заготовки` note. **No cross-file jump is needed mid-session**
+  — `REPRO.md` stays the source of truth; `RECORDING.md` is disposable.
 - `episodes/<ep>/VOICE.md` — the **voice session**. `[ГОЛОС]` lines only, in reading order, cues
   stripped, with a margin note per block naming the IDs it covers (`→ #3 · M2`). The Хук and
   Вердикт blocks are marked 🎯 НАИЗУСТЬ (learn verbatim).

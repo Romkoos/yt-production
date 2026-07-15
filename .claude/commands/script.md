@@ -108,34 +108,35 @@ film*, never *when* — timing for both is resolved in later phases, not here.
 
 ---
 
-## Step 3 — Refine the reproduction protocol (REPRO.md scenes)
+## Step 3 — Align the reproduction protocol (REPRO.md ↔ script)
 
-`/review-repo` already created `episodes/<ep>/REPRO.md` with `## Prepared states`,
-`## SETUP`, and `## Failure recipes`. Now fill the two parts that need the script — so
-the host can **record every scene without understanding the repo internals**:
+`/review-repo` already wrote `episodes/<ep>/REPRO.md` as the **linear user flow**: `## Clean
+slate`, `## User flow` (numbered `<a id="scene-N">` steps), `## Evidence inserts` (anchored proofs),
+`## Environment caveats`, and optional `## Prepared states` (read the **Recording doctrine** in
+`CLAUDE.md`). Your `[СКРИНКАСТ #N]` cues in Step 2 must reference these scenes **in the same linear
+order** — the narrative order **is** the shooting order. Now align the two:
 
-- **`## Scenes`** — write **one block per `[СКРИНКАСТ #N]` cue** in `script.md`, in
-  shooting order. The block for cue `#N` carries the anchor `<a id="scene-N"></a>` —
-  **the N comes from the script's tag, not from the block's position in the file.**
-  `pnpm prep` validates both directions and refuses to generate anything if a `#N` has
-  no block, or a block has no `#N`. Fill each block from `report.md` + the sandbox:
-  - **Do:** the commands / clicks to perform, verbatim.
-  - **On screen:** what will appear, so the host knows it worked.
-  - **Wait/Cut:** perf/timing notes (`build takes ~90s — start recording after`), or `—`.
-  - **Reset:** how to re-shoot if re-shootable (`delete node_modules to re-record the
-    install scene`), or `—` if idempotent.
-  Cross-link any failure-demo scene to its `## Failure recipes` entry. Clock (b): these are
-  semantic shooting instructions, **never** timecodes.
-- **`Recording time budget`** (the top line) — the estimated total recording time if the
-  protocol is followed. Call out any single long wait (e.g. a ~70s test run) and whether
-  one capture can serve two scenes.
+- **Each `[СКРИНКАСТ #N]` cue points at exactly one REPRO scene** — a `## User flow` step or an
+  `## Evidence insert` carrying `<a id="scene-N"></a>`. Confirm the bijection: every `#N` has a
+  scene block and every scene block has a `#N`. `pnpm prep` refuses to generate anything otherwise.
+- **The anchors must ascend along the flow** (`scene-1`, `scene-2`, … top to bottom). Because you
+  number the `[СКРИНКАСТ #N]` cues in narrative order and the flow is already linear, they line up
+  by construction. `pnpm prep` hard-fails if the REPRO anchors don't ascend — fix the numbering, do
+  **not** reorder the honest flow to match a bad cue order.
+- **If the flow is missing a moment your script needs to show**, add the step (or evidence insert)
+  to `REPRO.md` at the right point in the flow — with what the user **does** / **sees**, or the
+  proof + its `Anchor` bullet — and renumber so the anchors stay ascending. Keep it a real step a
+  user would hit, not a staged setup. Clock (b): shooting instructions, **never** timecodes.
+- **`Recording time budget`** (the top line) — the estimated total time for **one linear take** if
+  the flow is followed. Call out any single long wait (e.g. a ~70s test run) that the host should
+  plan the take around.
 
-**Acceptance test for this file:** the host can record every scene without making a
-decision that isn't written in `REPRO.md`. If a scene needs a choice `REPRO.md` doesn't
+**Acceptance test for this file:** the host can record the whole flow, top to bottom, without
+making a decision that isn't written in `REPRO.md`. If a step needs a choice `REPRO.md` doesn't
 answer, it's incomplete — fix it here.
 
-If `episodes/<ep>/REPRO.md` is missing (an episode from before this artifact existed),
-create it from `templates/REPRO.md` and fill **all** sections, not just the scenes.
+If `episodes/<ep>/REPRO.md` is missing (an episode from before this artifact existed), create it
+from `templates/REPRO.md` and fill **all** sections, not just the flow.
 
 ---
 
@@ -146,7 +147,7 @@ Edit `episodes/<ep>/STATE.md`:
 - Frontmatter: set `current_phase: script`, `phase_status: done`, and `updated:`
   to today's date (`YYYY-MM-DD`).
 - `## Artifacts`: update the `script.md` line to `script.md: present`, and the
-  `REPRO.md` line to `REPRO.md: present` (scenes now filled in — Step 3).
+  `REPRO.md` line to `REPRO.md: present` (flow ↔ #СКРИНКАСТ cues aligned — Step 3).
 - `## Next action`: replace it with `Manual phase: record voice + screencast, edit
   in Resolve, then reconcile timecodes`.
 - `## Phase checklist`: check the `script` box (`- [x] script`).
@@ -212,8 +213,9 @@ the tables don't exist.
 
 This command writes **only**:
 - `episodes/<ep>/script.md` — new file, filled in from `report.md`.
-- `episodes/<ep>/REPRO.md` — updated in place: the `## Scenes` blocks (one per
-  `[СКРИНКАСТ]` cue) and the `Recording time budget` line (Step 3).
+- `episodes/<ep>/REPRO.md` — updated in place: the flow ↔ `[СКРИНКАСТ #N]` alignment (adding
+  or renumbering `<a id="scene-N">` blocks only if the flow was missing a moment) and the
+  `Recording time budget` line (Step 3).
 - `episodes/<ep>/STATE.md` — updated in place (script phase fields only).
 - `db/tracker.sqlite` — one new `phaseMetrics` row (and the `episodes` row, only
   if it didn't already exist).

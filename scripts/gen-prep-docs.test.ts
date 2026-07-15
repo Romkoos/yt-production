@@ -54,12 +54,20 @@ describe('writePrepDocs', () => {
       expect(recording()).toContain('**Дальше:** «Приложение нотаризовано.»')
     })
 
-    it('carries the pre-flight material and the failure recipes verbatim', () => {
+    it('builds the pre-flight from clean slate, one-shot caveats and off-camera prepared states', () => {
       writePrepDocs(paths, content)
-      expect(recording()).toContain('~30 мин на 3 сцены')
-      expect(recording()).toContain('READY-DMG')
-      expect(recording()).toContain('Сцену 2 снимай ПЕРВОЙ')
-      expect(recording()).toContain('xattr -w com.apple.quarantine')
+      const r = recording()
+      expect(r).toContain('~30 мин на весь линейный дубль') // recording time budget
+      expect(r).toContain('## Чистый лист') // the wipe checklist on top
+      expect(r).toContain('rm -rf ~/Library/Application') // clean-slate command, verbatim
+      expect(r).toContain('ОДИН ДУБЛЬ') // the one-shot warning block
+      expect(r).toContain('только в первом прогоне') // env caveat, verbatim
+      expect(r).toContain('Заготовки') // demoted, off-camera-only prepared states
+      expect(r).toContain('МОДЕЛИ')
+      // No isolated failure-recipe footer, and no out-of-order shooting instruction — the break
+      // now lives inside FLOW 2, in linear order.
+      expect(r).not.toContain('## Failure recipes')
+      expect(r).not.toContain('снимай ПЕРВОЙ')
     })
 
     it('groups scenes under their beat', () => {
@@ -188,9 +196,9 @@ describe('writePrepDocs', () => {
         .replace('[СКРИНКАСТ #3:', '[СКРИНКАСТ #2:')
       const repro2 = REPRO.replace(/<a id="scene-1"><\/a>[\s\S]*?(?=<a id="scene-2")/, '')
         .replace('<a id="scene-2">', '<a id="scene-1">')
-        .replace('### SCENE 2 —', '### SCENE 1 —')
+        .replace('### FLOW 2 —', '### FLOW 1 —')
         .replace('<a id="scene-3">', '<a id="scene-2">')
-        .replace('### SCENE 3 —', '### SCENE 2 —')
+        .replace('### EVIDENCE 3 —', '### EVIDENCE 2 —')
 
       const r = writePrepDocs(paths, { ...content, script: script2, repro: repro2 })
 
@@ -212,7 +220,7 @@ describe('writePrepDocs', () => {
 
   describe('validation — writes nothing on failure', () => {
     it('rejects a #N whose REPRO scene block was deleted, and writes nothing', () => {
-      const repro2 = REPRO.replace(/<a id="scene-3"><\/a>[\s\S]*?(?=\n## Failure recipes)/, '')
+      const repro2 = REPRO.replace(/<a id="scene-3"><\/a>[\s\S]*?(?=\n## Environment caveats)/, '')
       const r = writePrepDocs(paths, { ...content, repro: repro2 })
 
       expect(r.status).toBe('invalid')
@@ -224,8 +232,8 @@ describe('writePrepDocs', () => {
 
     it('rejects an ORPHAN REPRO scene block with no matching #N, and writes nothing', () => {
       const repro2 = REPRO.replace(
-        '\n## Failure recipes',
-        '\n<a id="scene-4"></a>\n### SCENE 4 — сирота  ·  _beat: Живой тест_\n- **Do:** ничего\n\n## Failure recipes',
+        '\n## Environment caveats',
+        '\n<a id="scene-4"></a>\n### EVIDENCE 4 — сирота  ·  _beat: Живой тест_\n- **Do:** ничего\n\n## Environment caveats',
       )
       const r = writePrepDocs(paths, { ...content, repro: repro2 })
 
@@ -238,19 +246,18 @@ describe('writePrepDocs', () => {
       writePrepDocs(paths, content)
       const before = recording()
 
-      const repro2 = REPRO.replace(/<a id="scene-3"><\/a>[\s\S]*?(?=\n## Failure recipes)/, '')
+      const repro2 = REPRO.replace(/<a id="scene-3"><\/a>[\s\S]*?(?=\n## Environment caveats)/, '')
       expect(writePrepDocs(paths, { ...content, repro: repro2 }).status).toBe('invalid')
 
       expect(recording()).toBe(before)
     })
   })
 
-  // Finding #2 (review): scene lookup is `byNum.get(cue.num)`, keyed on the <a id="scene-N">
-  // anchor value — NOT `repro.scenes[i]` by array position. Every OTHER fixture happens to have
-  // num === index+1, so a regression to positional lookup would slip past every other test here.
-  // This fixture deliberately lists the REPRO scene blocks in the WRONG physical order (scene-2
-  // before scene-1) so the two lookup strategies disagree, and only the by-number one is correct.
-  describe('scene lookup — by REPRO anchor number, not array position', () => {
+  // Linear-take doctrine: the narrative order IS the shooting order, so the REPRO anchors must
+  // ASCEND along the flow. A REPRO whose blocks are physically out of order (scene-2 before scene-1)
+  // no longer reads top-to-bottom as the host records — the monotonic guard rejects it and writes
+  // nothing, rather than silently generating a doc the host would shoot out of sequence.
+  describe('monotonic guard — anchors must ascend along the flow', () => {
     const SCRIPT_OOO = [
       '# Сценарий: out-of-order test',
       '',
@@ -265,40 +272,24 @@ describe('writePrepDocs', () => {
     const REPRO_OOO = [
       '# REPRO — out-of-order test',
       '',
-      '## Scenes',
+      '## User flow',
       '',
       '<a id="scene-2"></a>',
-      '### SCENE 2 — второй по счёту  ·  _beat: Live test_',
+      '### FLOW 2 — второй по счёту  ·  _beat: Live test_',
       '- **Do:** SCENE-TWO-MARKER',
       '',
       '<a id="scene-1"></a>',
-      '### SCENE 1 — первый по счёту  ·  _beat: Live test_',
+      '### FLOW 1 — первый по счёту  ·  _beat: Live test_',
       '- **Do:** SCENE-ONE-MARKER',
-      '',
-      '## Failure recipes',
       '',
     ].join('\n')
 
-    it('maps #1 to the anchor scene-1 block and #2 to scene-2, even though scene-2 comes first in the file', () => {
+    it('rejects a REPRO whose anchors descend (2 before 1), and writes nothing', () => {
       const r = writePrepDocs(paths, { episode: 'ep-ooo', repo: 'o/r', script: SCRIPT_OOO, repro: REPRO_OOO })
-      expect(r.status).toBe('written')
-
-      const md = recording()
-      const chunk1 = md.slice(md.indexOf('#1 —'), md.indexOf('#2 —'))
-      const chunk2 = md.slice(md.indexOf('#2 —'))
-
-      // #1 must carry scene-1's content (title + marker) — NOT scene-2's, which is what a
-      // `repro.scenes[i]` regression would wire up instead (scene-2 is physically first).
-      expect(chunk1).toContain('первый по счёту')
-      expect(chunk1).toContain('SCENE-ONE-MARKER')
-      expect(chunk1).not.toContain('второй по счёту')
-      expect(chunk1).not.toContain('SCENE-TWO-MARKER')
-
-      // #2 must carry scene-2's content — not scene-1's.
-      expect(chunk2).toContain('второй по счёту')
-      expect(chunk2).toContain('SCENE-TWO-MARKER')
-      expect(chunk2).not.toContain('первый по счёту')
-      expect(chunk2).not.toContain('SCENE-ONE-MARKER')
+      expect(r.status).toBe('invalid')
+      expect(r.status === 'invalid' && r.errors.join('\n')).toMatch(/по возрастанию вдоль потока/)
+      expect(existsSync(paths.recordingPath)).toBe(false)
+      expect(existsSync(paths.voicePath)).toBe(false)
     })
   })
 

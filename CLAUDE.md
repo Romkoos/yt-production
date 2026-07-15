@@ -44,14 +44,15 @@ sequentially from 1, in narrative order, and every derived doc reads its numberi
 
 | Tag | Form | Derived into |
 |-----|------|--------------|
-| `[СКРИНКАСТ #N: …]` | `#1, #2…` | `REPRO.md`'s `<a id="scene-N">`, `RECORDING.md`'s checkboxes |
+| `[СКРИНКАСТ #N: …]` | `#1, #2…` | `REPRO.md`'s `<a id="scene-N">` (on a `## User flow` step or an `## Evidence insert`), `RECORDING.md`'s checkboxes |
 | `[АНИМАЦИЯ A<n>: …]` | `A1, A2…` | the edit; `VOICE.md` margin notes |
 | `[МЕМ M<n>: …]` | `M1, M2…` | `assets/MEME_LIST.md` headers |
 | `[SHORT cut S<n>: …]` | `S1, S2…` | `/cut-shorts` (post-edit) |
 
 `[ГОЛОС]` takes no ID. `pnpm prep` hard-fails (writing nothing) on a missing ID, a gap or
-duplicate, or a `#N` ↔ `#scene-N` mismatch in **either** direction. Episodes written before this
-scheme (ep001) are detected as legacy: `pnpm prep` skips them with a message and **exits 0**.
+duplicate, a `#N` ↔ `#scene-N` mismatch in **either** direction, or REPRO flow anchors that don't
+**ascend** (narrative order = shooting order). Episodes written before this scheme (ep001) are
+detected as legacy: `pnpm prep` skips them with a message and **exits 0**.
 
 ## Verdict scale (FIXED — do not invent new labels)
 
@@ -81,13 +82,36 @@ Each phase is an independently runnable command. State lives in the episode's `S
 `manual` phase is the human one (record voice, record screencast in Screen Studio, edit in
 DaVinci Resolve). The pipeline waits there.
 
+### Recording doctrine (IMPORTANT — the linear take)
+
+The host records **the user's path**, live, in **one continuous linear take** on a **clean machine
+state** — exactly the steps a real user would take, in the order a real user would take them. No
+sandbox shortcuts on camera, no prepared states shown in frame, no *«оставь на потом»*, no jumping
+between scenes out of order. **Evidence moments** (the `spctl` / `lsof` / `strings` / `git log`
+proofs) are woven **into the flow** at the point the narrative needs them — the host proves the
+hypothesis right where the user would hit the problem. **The edit carves scenes out of one honest
+take**; scenes are never shot as isolated setups.
+
+Prepared states are allowed **only for off-camera time savings** (e.g. pre-downloading model
+weights before the session) and must **never appear in frame as a shortcut the user wouldn't have
+taken**. Beware one-shot moments: some evidence exists **only in the first run from a clean slate**
+(e.g. Gatekeeper caches its verdict, so the block dialog is unreproducible after the first Open) —
+`REPRO.md` flags these and `RECORDING.md` surfaces them as **⚠️ ОДИН ДУБЛЬ**.
+
+`REPRO.md` implements this: `## Clean slate` (wipe to first-run state) → `## User flow` (the numbered
+linear path, each step a `<a id="scene-N">` block) → `## Evidence inserts` (each proof anchored to a
+flow step) → `## Environment caveats` (one-shot moments). Because narrative order **is** shooting
+order by construction, the `[СКРИНКАСТ #N]` cues and the REPRO anchors ascend together — `pnpm prep`
+hard-fails if the flow anchors don't ascend.
+
 **Manual-phase docs — one file drives one sitting.** `/assets` generates `RECORDING.md` (the
-screencast session: a checkbox per scene, commands inline, plus the voice beat each scene plays
-under) and `VOICE.md` (the voice session: `[ГОЛОС]` only, in reading order, hook + verdict marked
-learn-verbatim). Both are **derived and regenerable** — `script.md` and `REPRO.md` are the sources
-of truth. Re-running `pnpm prep` carries the host's ticked boxes over by scene ID; a scene whose
-content changed since it was ticked is reset and flagged. (`SHOTLIST.md` is gone — `RECORDING.md`
-supersedes it.)
+**linear shooting run**: the wipe checklist on top, then a checkbox per `[СКРИНКАСТ #N]` in flow
+order with commands / on-screen / evidence inserts inline and the voice beat each scene plays under,
+one-shot moments marked ⚠️ ОДИН ДУБЛЬ) and `VOICE.md` (the voice session: `[ГОЛОС]` only, in reading
+order, hook + verdict marked learn-verbatim). Both are **derived and regenerable** — `script.md` and
+`REPRO.md` are the sources of truth. Re-running `pnpm prep` carries the host's ticked boxes over by
+scene ID; a scene whose content changed since it was ticked is reset and flagged. (`SHOTLIST.md` is
+gone — `RECORDING.md` supersedes it.)
 
 ### STATE.md contract
 
